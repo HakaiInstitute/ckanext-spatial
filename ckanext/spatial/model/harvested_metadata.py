@@ -768,12 +768,59 @@ class ISODocument(MappedXmlDocument):
             multiplicity="1..*",
         ),
         ISOElement(
+            name="unique-metadata-identifier",
+            search_paths=[
+                # 19115-3
+                "mdb:metadataIdentifier/mcc:MD_Identifier",
+            ],
+            multiplicity="0..1",
+            elements=[
+                ISOElement(
+                    name="code",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:code/gco:CharacterString/text()",
+                        "mcc:code/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+                ISOElement(
+                    name="authority",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:authority/cit:CI_Citation/cit:title/gco:CharacterString/text()",
+                        "mcc:authority/cit:CI_Citation/cit:title/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+                ISOElement(
+                    name="code-space",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:codeSpace/gco:CharacterString/text()",
+                        "mcc:codeSpace/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+                ISOElement(
+                    name="version",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:version/gco:CharacterString/text()",
+                        "mcc:version/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+            ]
+        ),
+        ISOElement(
             name="unique-resource-identifier",
             search_paths=[
                 "gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:identifier/gmd:MD_Identifier/gmd:code/gco:CharacterString/text()",
                 "gmd:identificationInfo/gmd:SV_ServiceIdentification/gmd:citation/gmd:CI_Citation/gmd:identifier/gmd:MD_Identifier/gmd:code/gco:CharacterString/text()",
                 # 19115-3
-                "mdb:metadataIdentifier/mcc:MD_Identifier/mcc:code/gco:CharacterString/text()",
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier/mcc:code/gco:CharacterString/text()",
+                "mdb:identificationInfo/mri:SV_ServiceIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier/mcc:code/gco:CharacterString/text()",
             ],
             multiplicity="0..1",
         ),
@@ -789,7 +836,8 @@ class ISODocument(MappedXmlDocument):
             name="unique-resource-identifier-full",
             search_paths=[
                 # 19115-3
-                "mdb:metadataIdentifier/mcc:MD_Identifier",
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier"
+                "mdb:identificationInfo/mri:SV_ServiceIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier"
             ],
             multiplicity="0..1",
             elements=[
@@ -1335,6 +1383,8 @@ class ISODocument(MappedXmlDocument):
 
     def infer_guid_from_metadata_idetifier(self, values):
         identifier = values.get('unique-resource-identifier-full', {})
+        if not identifier:
+            return
         code = identifier.get('code')
         codeSpace = identifier.get('code-space')
         authority = identifier.get('authority')
