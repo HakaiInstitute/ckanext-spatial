@@ -1382,7 +1382,7 @@ class ISODocument(MappedXmlDocument):
             values['metadata-language'] = values['metadata-language'][:2].lower()
 
     def infer_guid_from_metadata_idetifier(self, values):
-        identifier = values.get('unique-resource-identifier-full', {})
+        identifier = values.get('unique-metadata-identifier', {})
         if not identifier:
             return
         code = identifier.get('code')
