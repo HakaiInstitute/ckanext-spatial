@@ -546,8 +546,14 @@ class ISOKeyword(ISOElement):
             ],
             multiplicity="0..1",
         ),
-        # If Thesaurus information is needed at some point, this is the
-        # place to add it
+        ISOElement(
+            name="thesaurus",
+            search_paths=[
+                # ISO1911-3
+                "mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text()",
+            ],
+            multiplicity="0..1",
+        ),
     ]
 
 
@@ -929,6 +935,24 @@ class ISODocument(MappedXmlDocument):
                 # ISO19115-3
                 "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords",
                 "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords",
+            ],
+            multiplicity="*",
+        ),
+        ISOKeyword(
+            name="mapp-theme",
+            search_paths=[
+                # ISO19115-3
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Theme']",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Theme']",
+            ],
+            multiplicity="*",
+        ),
+        ISOKeyword(
+            name="mapp-sub-theme",
+            search_paths=[
+                # ISO19115-3
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-theme']",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-theme']",
             ],
             multiplicity="*",
         ),
@@ -1388,18 +1412,21 @@ class ISODocument(MappedXmlDocument):
         if isinstance(keywords, list):
             for klist in keywords:
                 ktype = klist.get('type')
+                kthesaurus = klist.get('thesaurus')
                 for item in klist.get('keywords', []):
                     LangDict = self.local_to_dict(item, defaultLangKey)
                     value.append({
                         'keyword': json.dumps(LangDict),
-                        'type': ktype
+                        'type': ktype,
+                        'thesaurus': kthesaurus
                     })
         else:
             for item in keywords:
                 LangDict = self.local_to_dict(item, defaultLangKey)
                 value.append({
                     'keyword': json.dumps(LangDict),
-                    'type': item.get('type')
+                    'type': item.get('type'),
+                    'thesaurus': item.get('thesaurus')
                 })
         log.debug('Keywords:%r', value)
         values['keywords'] = value
