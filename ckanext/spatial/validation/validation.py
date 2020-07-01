@@ -287,7 +287,10 @@ class SchematronValidator(BaseValidator):
             message_element = failed_assert_element.find("{http://purl.oclc.org/dsdl/svrl}diagnostic-reference[@{http://www.w3.org/XML/1998/namespace}lang='en']")
         if not message_element:
             message_element = failed_assert_element.find("{http://purl.oclc.org/dsdl/svrl}diagnostic-reference")
-        message = message_element.text.strip()
+        if not message_element:
+            message = 'Missing required field'
+        else:
+            message = message_element.text.strip()
 
         # TODO: Do we really need such detail on the error messages?
         return message, 'Error Message: "%s"  Error Location: "%s"  Error Assert: "%s"' % (message, location, assert_)
@@ -320,6 +323,18 @@ class ISO19115Schematron(SchematronValidator):
         with resource_stream(
                 __name__,
                 "xml/iso19115-3/standards.iso.org/iso/19115/-3/mdb/1.0/mdb.sch") as schema:
+
+            return [cls.schematron(schema)]
+
+class CIOOSSchematron(SchematronValidator):
+    name = 'CIOOSschematron'
+    title = 'CIOOS Schematron'
+
+    @classmethod
+    def get_schematrons(cls):
+        with resource_stream(
+                __name__,
+                "xml/cioos-iso-validate/cioos_iso_validate/schematron/cioos.sch") as schema:
 
             return [cls.schematron(schema)]
 
@@ -377,6 +392,7 @@ all_validators = (ISO19115Schema,
                   ISO19139NGDCSchema,
                   FGDCSchema,
                   ISO19115Schematron,
+                  CIOOSSchematron,
                   ConstraintsSchematron,
                   ConstraintsSchematron14,
                   Gemini2Schematron,
