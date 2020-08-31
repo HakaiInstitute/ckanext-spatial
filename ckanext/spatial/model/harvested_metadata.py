@@ -951,8 +951,8 @@ class ISODocument(MappedXmlDocument):
             name="mapp-sub-theme",
             search_paths=[
                 # ISO19115-3
-                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-theme']",
-                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-theme']",
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']",
             ],
             multiplicity="*",
         ),
