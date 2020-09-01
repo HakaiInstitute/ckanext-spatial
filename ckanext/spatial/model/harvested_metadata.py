@@ -938,21 +938,21 @@ class ISODocument(MappedXmlDocument):
             ],
             multiplicity="*",
         ),
-        ISOKeyword(
+        ISOElement(
             name="mapp-theme",
             search_paths=[
                 # ISO19115-3
-                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Theme']",
-                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Theme']",
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Theme']/mri:keyword/gco:CharacterString/text()",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Theme']/mri:keyword/gco:CharacterString/text()",
             ],
             multiplicity="*",
         ),
-        ISOKeyword(
+        ISOElement(
             name="mapp-sub-theme",
             search_paths=[
                 # ISO19115-3
-                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']",
-                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']",
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']/mri:keyword/gco:CharacterString/text()",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']/mri:keyword/gco:CharacterString/text()",
             ],
             multiplicity="*",
         ),
@@ -1331,6 +1331,7 @@ class ISODocument(MappedXmlDocument):
         self.infer_multilinguale(values)
         self.infer_guid_from_metadata_idetifier(values)
         self.infer_temporal_vertical_extent(values)
+        self.infer_tag_string(values)
         return values
 
     def infer_temporal_vertical_extent(self, values):
@@ -1547,6 +1548,13 @@ class ISODocument(MappedXmlDocument):
                 if value:
                     break
         values['contact-email'] = value
+
+    def infer_tag_string(self, values):
+        theme = values.get('mapp-theme')
+        sub_theme = values.get('mapp-sub-theme')
+
+        values['mapp-theme'] = ', '.join(theme)
+        values['mapp-sub-theme'] = ', '.join(sub_theme)
 
 
 class GeminiDocument(ISODocument):
