@@ -520,6 +520,30 @@ class ISOLocalised(ISOElement):
         )
     ]
 
+class ISOKeyword_nolocal(ISOElement):
+
+    elements = [
+        ISOElement(
+            name="keyword",
+            search_paths=[
+                "gmd:keyword/gco:CharacterString/text()",
+                "mri:keyword/gco:CharacterString/text()"
+            ],
+            multiplicity="*",
+        ),
+        ISOElement(
+            name="type",
+            search_paths=[
+                "gmd:type/gmd:MD_KeywordTypeCode/@codeListValue",
+                "gmd:type/gmd:MD_KeywordTypeCode/text()",
+                "mri:type/mri:MD_KeywordTypeCode/@codeListValue",
+                "mri:type/mri:MD_KeywordTypeCode/text()",
+            ],
+            multiplicity="0..1",
+        ),
+        # If Thesaurus information is needed at some point, this is the
+        # place to add it
+   ]
 
 class ISOKeyword(ISOElement):
 
@@ -938,7 +962,7 @@ class ISODocument(MappedXmlDocument):
             ],
             multiplicity="*",
         ),
-        ISOElement(
+	ISOElement(
             name="mapp-theme",
             search_paths=[
                 # ISO19115-3
