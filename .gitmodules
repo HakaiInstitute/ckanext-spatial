@@ -1,3 +1,0 @@
-[submodule "ckanext/spatial/validation/xml/cioos-iso-validate"]
-	path = ckanext/spatial/validation/xml/cioos-iso-validate
-	url = https://github.com/cioos-siooc/cioos-iso-validate.git

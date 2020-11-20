@@ -1,4 +1,5 @@
 import os
+import cioos_iso_validate as cioos_iso_validate
 from pkg_resources import resource_stream
 from ckanext.spatial.model import ISODocument
 
@@ -332,9 +333,10 @@ class CIOOSSchematron(SchematronValidator):
 
     @classmethod
     def get_schematrons(cls):
+        sch_path = os.path.dirname(os.path.relpath(cioos_iso_validate.__file__, os.path.dirname(os.path.abspath(__file__)))) + '/schematron/cioos.sch'
         with resource_stream(
                 __name__,
-                "xml/cioos-iso-validate/cioos_iso_validate/schematron/cioos.sch") as schema:
+                sch_path) as schema:
 
             return [cls.schematron(schema)]
 
