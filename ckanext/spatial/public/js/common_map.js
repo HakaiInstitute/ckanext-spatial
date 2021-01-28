@@ -87,24 +87,37 @@
 
       map.addLayer(baseLayer);
 
+      function getColor(i) {
+          pallet = ["#1f78b4","#e31a1c","#fb9a99","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#a6cee3","#b2df8a","#33a02c"];
+          if(i>10){
+            return '#FFEDA0';
+          }
+          return pallet[i];
+      }
+
+      function myStyle(i) {
+        return {
+          "color": getColor(i),
+          "weight": 2,
+          "opacity": 1,
+          "fillColor": getColor(i),
+          "fillOpacity": 0.1,
+          "clickable": false
+        };
+      }
+
       let urls = []
       if (mapConfig.geoJsonLayerURLs) {
         urls = JSON.parse(mapConfig.geoJsonLayerURLs);
-        var GJLayer = L.geoJSON().addTo(map);
-
-        for(const url of urls){
-            var xhr = new XMLHttpRequest();
-            xhr.timeout = 2000; // time in milliseconds
-            xhr.open('GET', url);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.responseType = 'json';
-            xhr.onload = function () {
-                var status = xhr.status;
-                if (status == 200) {
-                  GJLayer.addData(xhr.response);
-                }
-            };
-            xhr.send();
+        var GJLayers = L.layerGroup().addTo(map)
+        for(const [i, url] of urls.entries()){
+          fetch(
+            url
+          ).then(
+            res => res.json()
+          ).then(
+            data => GJLayers.addLayer(L.geoJSON(data, {style: myStyle(i)}))
+          )
         }
       }
       return map;
