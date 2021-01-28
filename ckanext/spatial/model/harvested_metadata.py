@@ -715,12 +715,9 @@ class ISODocument(MappedXmlDocument):
                 "gmd:dateStamp/gco:DateTime/text()",
                 "gmd:dateStamp/gco:Date/text()",
                 # 19115-3
-                "mdb:dateInfo/cit:CI_Date[cit:dateType/cit:CI_DateTypeCode/@codeListValue='creation']/cit:date/gco:Date/text()",
-                "mdb:dateInfo/cit:CI_Date[cit:dateType/cit:CI_DateTypeCode/text()='creation']/cit:date/gco:Date/text()",
-                "mdb:dateInfo/cit:CI_Date[cit:dateType/cit:CI_DateTypeCode/@codeListValue='creation']/cit:date/gco:DateTime/text()",
-                "mdb:dateInfo/cit:CI_Date[cit:dateType/cit:CI_DateTypeCode/text()='creation']/cit:date/gco:DateTime/text()",
+                "mdb:dateInfo/cit:CI_Date/cit:date/gco:Date/text() | mdb:dateInfo/cit:CI_Date/cit:date/gco:DateTime/text()",
             ],
-            multiplicity="1",
+            multiplicity="1..*",
         ),
         ISOElement(
             name="spatial-reference-system",
@@ -1290,6 +1287,7 @@ class ISODocument(MappedXmlDocument):
         self.infer_date_released(values)
         self.infer_date_updated(values)
         self.infer_date_created(values)
+        self.infer_metadata_date(values)
         self.infer_url(values)
         # Todo: Infer resources.
         self.infer_tags(values)
@@ -1463,6 +1461,13 @@ class ISODocument(MappedXmlDocument):
                 dates.sort(reverse=True)
             value = dates[0]
         values['date-updated'] = value
+
+    def infer_metadata_date(self, values):
+        dates = values.get('metadata-date', [])
+        # use last date in list, here we assume latest date is last.
+        if len(dates):
+            dates.sort(reverse=True)
+            values['metadata-date'] = dates[0]
 
     def infer_date_created(self, values):
         value = ''
