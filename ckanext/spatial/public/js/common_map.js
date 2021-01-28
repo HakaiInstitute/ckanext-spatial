@@ -36,7 +36,7 @@
                 });
 
       var baseLayer;
-      
+
       map = new L.Map(container, leafletMapOptions);
 
       if (mapConfig.type == 'mapbox') {
@@ -73,7 +73,7 @@
               wmsOptions['crs'] = mapConfig['wms.srs'] || mapConfig['wms.crs'];
           }
           wmsOptions['version'] = mapConfig['wms.version'] || '1.1.1';
-          
+
           baseLayer = new L.TileLayer.WMS(baseLayerUrl, wmsOptions);
 
       } else {
@@ -87,8 +87,27 @@
 
       map.addLayer(baseLayer);
 
-      return map;
+      let urls = []
+      if (mapConfig.geoJsonLayerURLs) {
+        urls = JSON.parse(mapConfig.geoJsonLayerURLs);
+        var GJLayer = L.geoJSON().addTo(map);
 
+        for(const url of urls){
+            var xhr = new XMLHttpRequest();
+            xhr.timeout = 2000; // time in milliseconds
+            xhr.open('GET', url);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.responseType = 'json';
+            xhr.onload = function () {
+                var status = xhr.status;
+                if (status == 200) {
+                  GJLayer.addData(xhr.response);
+                }
+            };
+            xhr.send();
+        }
+      }
+      return map;
   }
 
 })(this.ckan, this.jQuery);
