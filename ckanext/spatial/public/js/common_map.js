@@ -116,7 +116,19 @@
           ).then(
             res => res.json()
           ).then(
-            data => GJLayers.addLayer(L.geoJSON(data, {style: myStyle(i)}))
+            data => GJLayers.addLayer(
+              L.geoJSON(
+                data,
+                {
+                  style: myStyle(i),
+                  onEachFeature: function (feature, layer) {
+                    if(feature.properties && feature.properties.name){
+                      layer.bindPopup(feature.properties.name);
+                    }
+                  }
+                }
+              )
+            )            
           )
         }
       }
