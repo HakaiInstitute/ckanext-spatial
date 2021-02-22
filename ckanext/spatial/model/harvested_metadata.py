@@ -1462,13 +1462,6 @@ class ISODocument(MappedXmlDocument):
             value = dates[0]
         values['date-updated'] = value
 
-    def infer_metadata_date(self, values):
-        dates = values.get('metadata-date', [])
-        # use last date in list, here we assume latest date is last.
-        if len(dates):
-            dates.sort(reverse=True)
-            values['metadata-date'] = dates[0]
-
     def infer_date_created(self, values):
         value = ''
         for date in values['dataset-reference-date']:
@@ -1476,6 +1469,44 @@ class ISODocument(MappedXmlDocument):
                 value = date['value']
                 break
         values['date-created'] = value
+
+    def infer_metadata_date(self, values):
+        dates = values.get('metadata-date', [])
+
+        # created
+        value = ''
+        for date in dates:
+            if date['type'] == 'creation':
+                value = date['value']
+                break
+        values['metadata-created'] = value
+
+        # published
+        value = ''
+        for date in dates:
+            if date['type'] == 'publication':
+                value = date['value']
+                break
+        values['metadata-released'] = value
+
+        # updated
+        value = ''
+        dates = []
+        # Use last of several multiple revision dates.
+        for date in dates:
+            if date['type'] == 'revision':
+                dates.append(date['value'])
+
+        if len(dates):
+            if len(dates) > 1:
+                dates.sort(reverse=True)
+            value = dates[0]
+        values['metadata-updated'] = value
+
+        # use newest date in list
+        if len(dates):
+            dates.sort(reverse=True)
+            values['metadata-date'] = dates[0]
 
     def infer_url(self, values):
         value = ''
