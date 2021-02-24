@@ -708,7 +708,14 @@ class ISODocument(MappedXmlDocument):
             ],
             multiplicity="1..*",
         ),
-
+        ISOReferenceDate(
+            name="metadata-reference-date",
+            search_paths=[
+                # 19115-3
+                "mdb:dateInfo/cit:CI_Date",
+            ],
+            multiplicity="1..*",
+        ),
         ISOElement(
             name="metadata-date",
             search_paths=[
@@ -751,7 +758,7 @@ class ISODocument(MappedXmlDocument):
                 "gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:date/gmd:CI_Date",
                 "gmd:identificationInfo/srv:SV_ServiceIdentification/gmd:citation/gmd:CI_Citation/gmd:date/gmd:CI_Date",
                 # 19115-3
-                "mdb:dateInfo/cit:CI_Date",
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:citation/cit:CI_Citation/cit:CI_Date"
             ],
             multiplicity="1..*",
         ),
@@ -1446,7 +1453,7 @@ class ISODocument(MappedXmlDocument):
             if date['type'] == 'publication':
                 value = date['value']
                 break
-        values['date-released'] = value
+        values['dataset-released'] = value
 
     def infer_date_updated(self, values):
         value = ''
@@ -1460,7 +1467,7 @@ class ISODocument(MappedXmlDocument):
             if len(dates) > 1:
                 dates.sort(reverse=True)
             value = dates[0]
-        values['date-updated'] = value
+        values['dataset-updated'] = value
 
     def infer_date_created(self, values):
         value = ''
@@ -1468,40 +1475,10 @@ class ISODocument(MappedXmlDocument):
             if date['type'] == 'creation':
                 value = date['value']
                 break
-        values['date-created'] = value
+        values['dataset-created'] = value
 
     def infer_metadata_date(self, values):
         dates = values.get('metadata-date', [])
-
-        # created
-        value = ''
-        for date in dates:
-            if date['type'] == 'creation':
-                value = date['value']
-                break
-        values['metadata-created'] = value
-
-        # published
-        value = ''
-        for date in dates:
-            if date['type'] == 'publication':
-                value = date['value']
-                break
-        values['metadata-released'] = value
-
-        # updated
-        value = ''
-        dates = []
-        # Use last of several multiple revision dates.
-        for date in dates:
-            if date['type'] == 'revision':
-                dates.append(date['value'])
-
-        if len(dates):
-            if len(dates) > 1:
-                dates.sort(reverse=True)
-            value = dates[0]
-        values['metadata-updated'] = value
 
         # use newest date in list
         if len(dates):
