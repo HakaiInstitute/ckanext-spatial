@@ -4,6 +4,7 @@ import re
 import json
 import pytz
 import datetime
+from ckan.lib.helpers import url_for_static_or_external
 
 import logging
 log = logging.getLogger(__name__)
@@ -1267,8 +1268,10 @@ class ISODocument(MappedXmlDocument):
                 # 19115-3
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/@codeListValue ='author']",
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/@codeListValue ='originator']",
+                "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/@codeListValue ='owner']",
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='author']",
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='originator']",
+                "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='owner']",
             ],
             multiplicity="1..*",
         ),
@@ -1302,7 +1305,44 @@ class ISODocument(MappedXmlDocument):
         self.infer_multilinguale(values)
         self.infer_guid_from_metadata_idetifier(values)
         self.infer_temporal_vertical_extent(values)
+        self.infer_citation(values)
         return values
+
+    def infer_citation(self, values):
+        dates = [x.get('value') for x in values.get('dataset-reference-date')]
+        if len(dates):
+            dates.sort(reverse=True)
+            date_value = dates[0]
+        else:
+            date_value = ''
+
+        abstract = json.loads(values.get('abstract', '{}'))
+        title = json.loads(values.get('title', '{}'))
+        value = {}
+        log.debug('AUTHORS:%r',values.get('author'))
+        log.debug('%r', [{"literal": filter(None, [x.get('individual-name'), x.get('organisation-name')])[0]} for x in values.get('author', [])])
+        for lang in ['fr', 'en']:
+            value[lang] = [{
+                "type": values.get('resource-type', ''),
+                "id": values.get('guid', ''),
+                "language": lang,
+                "author": [{"literal": filter(None, [x.get('individual-name'), x.get('organisation-name')])[0]} for x in values.get('author', [])],
+                "issued": {
+                    "date-parts": [
+                        [
+                            date_value
+                        ]
+                    ]
+                },
+                "abstract": abstract.get(lang, ''),
+                # "DOI": "10.21966/EAN1-N995",
+                "publisher": values.get('publisher', ''),
+                "title": title.get(lang, ''),
+                "URL": url_for_static_or_external(controller='package', action='read', id=values.get('guid', ''))
+            }]
+            value[lang] = json.dumps(value[lang])
+
+        values['citation'] = json.dumps(value)
 
     def infer_temporal_vertical_extent(self, values):
         value = {}
@@ -1396,7 +1436,6 @@ class ISODocument(MappedXmlDocument):
                     'keyword': json.dumps(LangDict),
                     'type': item.get('type')
                 })
-        log.debug('Keywords:%r', value)
         values['keywords'] = value
 
     def infer_multilinguale(self, values):
