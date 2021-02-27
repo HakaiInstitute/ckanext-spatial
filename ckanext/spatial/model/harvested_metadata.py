@@ -4,8 +4,8 @@ import re
 import json
 import pytz
 import datetime
-from ckan.lib.helpers import url_for_static_or_external
-
+from ckan.lib.helpers import url_for
+from copy import copy
 import logging
 log = logging.getLogger(__name__)
 
@@ -649,6 +649,111 @@ class ISOAggregationInfo(ISOElement):
     ]
 
 
+class ISOCitation(ISOElement):
+
+    elements = [
+        ISOElement(
+            name="type",
+            search_paths=[
+                # 19115-3
+                "ancestor::mdb:MD_Metadata/mdb:metadataScope/mdb:MD_MetadataScope/mdb:resourceScope/mcc:MD_ScopeCode/@codeListValue",
+                "ancestor::mdb:MD_Metadata/mdb:metadataScope/mdb:MD_MetadataScope/mdb:resourceScope/mcc:MD_ScopeCode/text()",
+            ],
+            multiplicity="1",
+        ),
+        ISOElement(
+            name="id",
+            search_paths=[
+                # 19115-3
+                "ancestor::mdb:MD_Metadata/mdb:metadataIdentifier/mcc:MD_Identifier",
+            ],
+            multiplicity="0..1",
+            elements=[
+                ISOElement(
+                    name="code",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:code/gco:CharacterString/text()",
+                        "mcc:code/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+                ISOElement(
+                    name="authority",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:authority/cit:CI_Citation/cit:title/gco:CharacterString/text()",
+                        "mcc:authority/cit:CI_Citation/cit:title/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+                ISOElement(
+                    name="code-space",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:codeSpace/gco:CharacterString/text()",
+                        "mcc:codeSpace/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+                ISOElement(
+                    name="version",
+                    search_paths=[
+                        # ISO19115-3
+                        "mcc:version/gco:CharacterString/text()",
+                        "mcc:version/gcx:Anchor/text()",
+                    ],
+                    multiplicity="0..1",
+                ),
+            ]
+        ),
+        ISOElement(
+            name="author",
+            search_paths=[
+                # 19115-3
+                "cit:citedResponsibleParty/cit:CI_Responsibility/cit:party/cit:CI_Individual/cit:name/gco:CharacterString[boolean(text())]/text()",
+                "cit:citedResponsibleParty/cit:CI_Responsibility/cit:party/cit:CI_Organisation/cit:name/gco:CharacterString[boolean(text())]/text()",
+            ],
+            multiplicity="1..*",
+        ),
+        ISOElement(
+            name="issued",
+            search_paths=[
+                # 19115-3
+                "ancestor::mdb:MD_Metadata/mdb:dateInfo/cit:CI_Date/cit:date/gco:Date/text() | ancestor::mdb:MD_Metadata/mdb:dateInfo/cit:CI_Date/cit:date/gco:DateTime/text()"
+            ],
+            multiplicity="1..*",
+        ),
+        ISOLocalised(
+            name="abstract",
+            search_paths=[
+                # ISO19115-3
+                "ancestor::mdb:MD_Metadata/mdb:identificationInfo/mri:MD_DataIdentification/mri:abstract",
+                "ancestor::mdb:MD_Metadata/mdb:identificationInfo/srv:SV_ServiceIdentification/mri:abstract",
+            ],
+            multiplicity="1",
+        ),
+        ISOResponsibleParty(
+            name="publisher",
+            search_paths=[
+                # 19115-3
+                "cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='publisher']/cit:party/cit:CI_Individual/cit:name/gco:CharacterString/text()[boolean(.)]",
+                "cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='publisher']/cit:party/cit:CI_Organisation/cit:name/gco:CharacterString/text()[boolean(.)]",
+
+            ],
+            multiplicity="1",
+        ),
+        ISOLocalised(
+            name="title",
+            search_paths=[
+                # 19115-3
+                "cit:title",
+            ],
+            multiplicity="1",
+        ),
+    ]
+
+
 class ISODocument(MappedXmlDocument):
 
     # Attribute specifications from "XPaths for GEMINI" by Peter Parslow.
@@ -1058,8 +1163,11 @@ class ISODocument(MappedXmlDocument):
         ISOElement(
             name="topic-category",
             search_paths=[
+                # ISO19139
                 "gmd:identificationInfo/gmd:MD_DataIdentification/gmd:topicCategory/gmd:MD_TopicCategoryCode/text()",
                 "gmd:identificationInfo/srv:SV_ServiceIdentification/gmd:topicCategory/gmd:MD_TopicCategoryCode/text()",
+                # ISO19115-3
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:topicCategory/mri:MD_TopicCategoryCode/text()",
             ],
             multiplicity="*",
         ),
@@ -1272,6 +1380,15 @@ class ISODocument(MappedXmlDocument):
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='author']",
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='originator']",
                 "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation/cit:citedResponsibleParty/cit:CI_Responsibility[cit:role/cit:CI_RoleCode/text() ='owner']",
+
+            ],
+            multiplicity="1..*",
+        ),
+        ISOCitation(
+            name="citation",
+            search_paths=[
+                # 19115-3
+                "mdb:identificationInfo/*[contains(local-name(), 'Identification')]/mri:citation/cit:CI_Citation"
             ],
             multiplicity="1..*",
         ),
@@ -1309,40 +1426,40 @@ class ISODocument(MappedXmlDocument):
         return values
 
     def infer_citation(self, values):
-        dates = [x.get('value') for x in values.get('dataset-reference-date')]
-        if len(dates):
+        value = values['citation'][0]
+        if len(value['issued']):
+            dates = value['issued']
             dates.sort(reverse=True)
-            date_value = dates[0]
-        else:
-            date_value = ''
+            value['issued'] = {"date-parts": [[str(dates[0])[:4]]]}
 
-        abstract = json.loads(values.get('abstract', '{}'))
-        title = json.loads(values.get('title', '{}'))
-        value = {}
-        log.debug('AUTHORS:%r',values.get('author'))
-        log.debug('%r', [{"literal": filter(None, [x.get('individual-name'), x.get('organisation-name')])[0]} for x in values.get('author', [])])
+        value['id'] = self.calculate_guid(value['id'])
+        value['author'] = list(dict.fromkeys(value['author']))
+        value['author'] = [{"literal": x} for x in value['author']]
+        defaultLangKey = self.cleanLangKey(values.get('metadata-language', 'en'))
+        value['title'] = self.local_to_dict(value['title'], defaultLangKey)
+        value['abstract'] = self.local_to_dict(value['abstract'], defaultLangKey)
+
+        # TODO: add DOI
+        # "DOI": "10.21966/EAN1-N995",
+
+        field = {}
         for lang in ['fr', 'en']:
-            value[lang] = [{
-                "type": values.get('resource-type', ''),
-                "id": values.get('guid', ''),
-                "language": lang,
-                "author": [{"literal": filter(None, [x.get('individual-name'), x.get('organisation-name')])[0]} for x in values.get('author', [])],
-                "issued": {
-                    "date-parts": [
-                        [
-                            date_value
-                        ]
-                    ]
-                },
-                "abstract": abstract.get(lang, ''),
-                # "DOI": "10.21966/EAN1-N995",
-                "publisher": values.get('publisher', ''),
-                "title": title.get(lang, ''),
-                "URL": url_for_static_or_external(controller='package', action='read', id=values.get('guid', ''))
-            }]
-            value[lang] = json.dumps(value[lang])
-
-        values['citation'] = json.dumps(value)
+            field[lang] = copy(value)
+            log.debug('Field:%r', field)
+            title = field[lang]['title']
+            field[lang]['title'] = title.get(lang)
+            abstract = field[lang]['abstract']
+            field[lang]['abstract'] = abstract.get(lang)
+            field[lang]['language'] = lang
+            field[lang]['URL'] = url_for(
+                controller='package',
+                action='read',
+                id=values.get('guid', ''),
+                local=lang,
+                qualified=True
+            )
+            field[lang] = json.dumps([field[lang]])
+        values['citation'] = json.dumps(field)
 
     def infer_temporal_vertical_extent(self, values):
         value = {}
@@ -1368,15 +1485,23 @@ class ISODocument(MappedXmlDocument):
         if values.get('metadata-language'):
             values['metadata-language'] = values['metadata-language'][:2].lower()
 
-    def infer_guid_from_metadata_idetifier(self, values):
-        identifier = values.get('unique-resource-identifier-full', {})
+    def calculate_guid(self, identifier):
         code = identifier.get('code')
         codeSpace = identifier.get('code-space')
         authority = identifier.get('authority')
         version = identifier.get('version')
+        guid = None
         if code:
             id_list = [authority, codeSpace, code, version]
-            values['guid'] = '_'.join(x.strip() for x in id_list if x.strip())
+            guid = '_'.join(x.strip() for x in id_list if x.strip())
+        return guid
+
+    def infer_guid_from_metadata_idetifier(self, values):
+        identifier = values.get('unique-resource-identifier-full', {})
+        guid = self.calculate_guid(identifier)
+        if guid:
+            values['guid'] = guid
+
 
     def cleanLangKey(self, key):
         key = re.sub("[^a-zA-Z]+", "", key)
