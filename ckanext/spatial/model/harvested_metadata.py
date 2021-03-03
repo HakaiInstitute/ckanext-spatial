@@ -1318,7 +1318,7 @@ class ISODocument(MappedXmlDocument):
             except Exception as e:
                 value['begin'] = min(blist)[:10]
                 value['end'] = max(elist)[:10]
-                log.debug('Problem converting temporal-extent dates to utc format, using %s and %s instead', value['begin'], value['end'])
+                log.debug('Problem converting temporal-extent dates to utc format. Defaulting to %s and %s instead', value['begin'], value['end'])
                 
             values['temporal-extent'] = value
 
@@ -1450,7 +1450,7 @@ class ISODocument(MappedXmlDocument):
                 date['value'] = self.iso_date_time_to_utc(date['value'])[:10]
             except Exception as e:
                 date['value'] = date['value'][:10]
-                log.debug('Problem converting dataset-reference-date to UTC, using %s instead',  date['value'])
+                log.debug('Problem converting dataset-reference-date to utc format. Defaulting to %s instead',  date['value'])
                 
             dates.append(date)
         if dates:
