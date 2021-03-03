@@ -1283,7 +1283,8 @@ class ISODocument(MappedXmlDocument):
             return utc_dt.strftime('%Y-%m-%d %H:%M:%S')
         except Exception as e:
             log.debug('Could not convert datetime value %s to UTC: %s', value, e)
-            return value
+            raise
+
 
     def infer_values(self, values):
         # Todo: Infer name.
@@ -1311,8 +1312,14 @@ class ISODocument(MappedXmlDocument):
         if te:
             blist = (x.get('begin') for x in te)
             elist = (x.get('end') for x in te)
-            value['begin'] = self.iso_date_time_to_utc(min(blist))[:10]
-            value['end'] = self.iso_date_time_to_utc(max(elist))[:10]
+            try:
+                value['begin'] = self.iso_date_time_to_utc(min(blist))[:10]
+                value['end'] = self.iso_date_time_to_utc(max(elist))[:10]
+            except Exception as e:
+                value['begin'] = min(blist)[:10]
+                value['end'] = max(elist)[:10]
+                log.debug('Problem converting temporal-extent dates to utc format, using %s and %s instead', value['begin'], value['end'])
+                
             values['temporal-extent'] = value
 
         value = {}
@@ -1370,6 +1377,7 @@ class ISODocument(MappedXmlDocument):
                 except Exception:
                     log.debug('Failed to decode latin1 encodid string "%r" as utf8, trying encoding as utf8', LangValue2)
                     LangValue2 = LangValue.encode('utf-8')
+                    log.debug('Encoding as utf8 was successful')
             if len(LangValue2) > 1:
                 out.update({langKey: LangValue2})
 
@@ -1438,7 +1446,12 @@ class ISODocument(MappedXmlDocument):
     def clean_dataset_reference_date(self, values):
         dates = []
         for date in values['dataset-reference-date']:
-            date['value'] = self.iso_date_time_to_utc(date['value'])[:10]
+            try:
+                date['value'] = self.iso_date_time_to_utc(date['value'])[:10]
+            except Exception as e:
+                date['value'] = date['value'][:10]
+                log.debug('Problem converting dataset-reference-date to UTC, using %s instead',  date['value'])
+                
             dates.append(date)
         if dates:
             values['dataset-reference-date'] = dates
