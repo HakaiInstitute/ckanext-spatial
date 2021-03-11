@@ -590,6 +590,47 @@ class ISOVerticalExtent(ISOElement):
     ]
 
 
+class ISOIdentifier(ISOElement):
+
+    elements = [
+        ISOElement(
+            name="code",
+            search_paths=[
+                # ISO19115-3
+                "mcc:code/gco:CharacterString/text()",
+                "mcc:code/gcx:Anchor/text()",
+            ],
+            multiplicity="0..1",
+        ),
+        ISOElement(
+            name="authority",
+            search_paths=[
+                # ISO19115-3
+                "mcc:authority/cit:CI_Citation/cit:title/gco:CharacterString/text()",
+                "mcc:authority/cit:CI_Citation/cit:title/gcx:Anchor/text()",
+            ],
+            multiplicity="0..1",
+        ),
+        ISOElement(
+            name="code-space",
+            search_paths=[
+                # ISO19115-3
+                "mcc:codeSpace/gco:CharacterString/text()",
+                "mcc:codeSpace/gcx:Anchor/text()",
+            ],
+            multiplicity="0..1",
+        ),
+        ISOElement(
+            name="version",
+            search_paths=[
+                # ISO19115-3
+                "mcc:version/gco:CharacterString/text()",
+                "mcc:version/gcx:Anchor/text()",
+            ],
+            multiplicity="0..1",
+        ),
+    ]
+
 
 class ISOUsage(ISOElement):
 
@@ -824,15 +865,18 @@ class ISODocument(MappedXmlDocument):
             ],
             multiplicity="0..1",
         ),
-        ISOElement(
+        ISOIdentifier(
             name="guid",
             search_paths=[
                 # ISO 19139
                 "gmd:fileIdentifier/gco:CharacterString/text()",
+                # 19115-3
+                "mdb:metadataIdentifier/mcc:MD_Identifier"
             ],
             multiplicity="0..1",
         ),
-        ISOElement(
+        ISOIdentifier(
+            # this would commonly be a DOI
             name="unique-resource-identifier-full",
             search_paths=[
                 # 19115-3
@@ -840,44 +884,6 @@ class ISODocument(MappedXmlDocument):
                 "mdb:identificationInfo/mri:SV_ServiceIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier"
             ],
             multiplicity="0..1",
-            elements=[
-                ISOElement(
-                    name="code",
-                    search_paths=[
-                        # ISO19115-3
-                        "mcc:code/gco:CharacterString/text()",
-                        "mcc:code/gcx:Anchor/text()",
-                    ],
-                    multiplicity="0..1",
-                ),
-                ISOElement(
-                    name="authority",
-                    search_paths=[
-                        # ISO19115-3
-                        "mcc:authority/cit:CI_Citation/cit:title/gco:CharacterString/text()",
-                        "mcc:authority/cit:CI_Citation/cit:title/gcx:Anchor/text()",
-                    ],
-                    multiplicity="0..1",
-                ),
-                ISOElement(
-                    name="code-space",
-                    search_paths=[
-                        # ISO19115-3
-                        "mcc:codeSpace/gco:CharacterString/text()",
-                        "mcc:codeSpace/gcx:Anchor/text()",
-                    ],
-                    multiplicity="0..1",
-                ),
-                ISOElement(
-                    name="version",
-                    search_paths=[
-                        # ISO19115-3
-                        "mcc:version/gco:CharacterString/text()",
-                        "mcc:version/gcx:Anchor/text()",
-                    ],
-                    multiplicity="0..1",
-                ),
-            ]
         ),
         ISOElement(
             name="presentation-form",
@@ -1353,7 +1359,7 @@ class ISODocument(MappedXmlDocument):
         self.infer_metadata_language(values)
         self.infert_keywords(values)
         self.infer_multilinguale(values)
-        self.infer_guid_from_metadata_idetifier(values)
+        self.infer_guid(values)
         self.infer_temporal_vertical_extent(values)
         return values
 
@@ -1381,8 +1387,8 @@ class ISODocument(MappedXmlDocument):
         if values.get('metadata-language'):
             values['metadata-language'] = values['metadata-language'][:2].lower()
 
-    def infer_guid_from_metadata_idetifier(self, values):
-        identifier = values.get('unique-metadata-identifier', {})
+    def infer_guid(self, values):
+        identifier = values.get('guid', {})
         if not identifier:
             return
         code = identifier.get('code')
