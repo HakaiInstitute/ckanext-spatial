@@ -772,7 +772,8 @@ class SpatialHarvester(HarvesterBase):
                         pass
                     else:
                         for extra in package_dict.get('extras', []):
-                            if extra['key'] == 'harvest_object_id':
+                            if (extra['key'] in
+                                    ['harvest_object_id', 'h_object_id']):
                                 extra['value'] = harvest_object.id
                         if package_dict:
                             package_index = PackageSearchIndex()

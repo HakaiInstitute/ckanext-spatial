@@ -104,6 +104,7 @@ this.ckan.module('spatial-query', function ($, _) {
           polygon: false,
           circle: false,
           marker: false,
+          circlemarker: false,
           rectangle: {shapeOptions: module.options.style}
         }
       }));
