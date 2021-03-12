@@ -986,8 +986,8 @@ class ISODocument(MappedXmlDocument):
             name="unique-resource-identifier-full",
             search_paths=[
                 # 19115-3
-                "mdb:identificationInfo/mri:MD_DataIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier"
-                "mdb:identificationInfo/mri:SV_ServiceIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier"
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier",
+                "mdb:identificationInfo/mri:SV_ServiceIdentification/mri:citation/cit:CI_Citation/cit:identifier/mcc:MD_Identifier",
             ],
             multiplicity="0..1",
         ),
@@ -1456,15 +1456,20 @@ class ISODocument(MappedXmlDocument):
             dates.sort(reverse=True)
             value['issued'] = {"date-parts": [[str(dates[0])[:4]]]}
 
-        value['id'] = self.calculate_guid(value['id'])
+        value['id'] = self.calculate_identifier(value['id'])
         value['author'] = list(OrderedDict.fromkeys(value['author']))
         value['author'] = [{"literal": x} for x in value['author']]
         defaultLangKey = self.cleanLangKey(values.get('metadata-language', 'en'))
         value['title'] = self.local_to_dict(value['title'], defaultLangKey)
         value['abstract'] = self.local_to_dict(value['abstract'], defaultLangKey)
 
-        # TODO: add DOI
-        # "DOI": "10.21966/EAN1-N995",
+        identifier = values.get('unique-resource-identifier-full', {})
+        if identifier:
+            doi = self.calculate_identifier(identifier)
+            if doi:
+                # value['DOI'] = re.sub(r'/http.*doi\.org\//', '', doi)
+                value['DOI'] = doi
+        # TODO: could we have more then one doi?
 
         field = {}
         for lang in ['fr', 'en']:
@@ -1498,7 +1503,7 @@ class ISODocument(MappedXmlDocument):
                 value['begin'] = min(blist)[:10]
                 if max(elist):
                     value['end'] = max(elist)[:10]
-                log.warn('Problem converting temporal-extent dates to utc format. Defaulting to %s and %s instead', value['begin'], value['end'])
+                log.warn('Problem converting temporal-extent dates to utc format. Defaulting to %s and %s instead', value.get('begin',''), value.get('end',''))
 
             values['temporal-extent'] = value
 
@@ -1516,8 +1521,7 @@ class ISODocument(MappedXmlDocument):
         if values.get('metadata-language'):
             values['metadata-language'] = values['metadata-language'][:2].lower()
 
-
-    def calculate_guid(self, identifier):
+    def calculate_identifier(self, identifier):
         code = identifier.get('code')
         codeSpace = identifier.get('code-space')
         authority = identifier.get('authority')
@@ -1528,18 +1532,11 @@ class ISODocument(MappedXmlDocument):
             guid = '_'.join(x.strip() for x in id_list if x.strip())
         return guid
 
-    def infer_guid_from_metadata_idetifier(self, values):
+    def infer_guid(self, values):
         identifier = values.get('guid', {})
-        guid = self.calculate_guid(identifier)
+        guid = self.calculate_identifier(identifier)
         if guid:
             values['guid'] = guid
-
-    def infer_guid_from_metadata_idetifier(self, values):
-        identifier = values.get('unique-resource-identifier-full', {})
-        guid = self.calculate_guid(identifier)
-        if guid:
-            values['guid'] = guid
-
 
     def cleanLangKey(self, key):
         key = re.sub("[^a-zA-Z]+", "", key)
