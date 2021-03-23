@@ -953,7 +953,7 @@ class ISODocument(MappedXmlDocument):
             ],
             multiplicity="*",
         ),
-	ISOElement(
+        ISOElement(
             name="mapp-theme",
             search_paths=[
                 # ISO19115-3
@@ -968,6 +968,24 @@ class ISODocument(MappedXmlDocument):
                 # ISO19115-3
                 "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']/mri:keyword/gco:CharacterString/text()",
                 "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Theme']/mri:keyword/gco:CharacterString/text()",
+            ],
+            multiplicity="*",
+        ),
+        ISOElement(
+            name="mapp-sub-region",
+            search_paths=[
+                # ISO19115-3
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Region']/mri:keyword/gco:CharacterString/text()",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Sub-Region']/mri:keyword/gco:CharacterString/text()",
+            ],
+            multiplicity="*",
+        ),
+        ISOElement(
+            name="mapp-project",
+            search_paths=[
+                # ISO19115-3
+                "mdb:identificationInfo/mri:MD_DataIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Project']/mri:keyword/gco:CharacterString/text()",
+                "mdb:identificationInfo/srv:SV_ServiceIdentification/mri:descriptiveKeywords/mri:MD_Keywords[mri:thesaurusName/cit:CI_Citation/cit:title/gco:CharacterString/text() = 'MaPP Project']/mri:keyword/gco:CharacterString/text()",
             ],
             multiplicity="*",
         ),
@@ -1571,9 +1589,13 @@ class ISODocument(MappedXmlDocument):
     def infer_tag_string(self, values):
         theme = values.get('mapp-theme')
         sub_theme = values.get('mapp-sub-theme')
+        sub_region = values.get('mapp-sub-region')
+        project = values.get('mapp-project')
 
         values['mapp-theme'] = ', '.join(theme)
         values['mapp-sub-theme'] = ', '.join(sub_theme)
+        values['mapp-sub-region'] = ', '.join(sub_region)
+        values['mapp-project'] = ', '.join(project)
 
 
 class GeminiDocument(ISODocument):
