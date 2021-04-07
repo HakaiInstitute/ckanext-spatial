@@ -482,12 +482,16 @@ class SpatialHarvester(HarvesterBase):
 
                     # Some publishers define the same two corners for the bbox (ie a point),
                     # that causes problems in the search if stored as polygon
+                    # code assumes no horizontal or vertical lines but that is likely ok
                     if xmin == xmax or ymin == ymax:
                         extent_string = Template('{"type": "Point", "coordinates": [$x, $y]}').substitute(
                             x=xmin, y=ymin
                         )
-                        self._save_object_error('Point extent defined instead of polygon',
-                                         harvest_object, 'Import')
+                        log.debug('Point extent defined instead of polygon')
+                        # point extent is not an error as the point is later
+                        # changed to a polygon for solr backend in plugin.py:L214
+                        # self._save_object_error('Point extent defined instead of polygon',
+                        #                  harvest_object, 'Import')
                     else:
                         extent_string = self.extent_template.substitute(
                             xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax
