@@ -264,6 +264,43 @@ class ISOResourceLocator(ISOElement):
             ],
             multiplicity="0..1",
         ),
+        ISOElement(
+            name="distribution-format",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:distributionFormat/mrd:MD_Format/mrd:formatSpecificationCitation/cit:CI_Citation/cit:title/gco:CharacterString/text()"
+            ],
+            multiplicity="0..*"
+        ),
+
+        ISOElement(
+            name="distributor-format",
+            search_paths=[
+                "ancestor::mrd:MD_Distributor/mrd:distributorFormat/mrd:MD_Format/mrd:formatSpecificationCitation/cit:CI_Citation/cit:title/gco:CharacterString/text()"
+            ],
+            multiplicity="0..*"
+        ),
+
+        ISOElement(
+            name="offline",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:offLine/mrd:MD_Medium/cit:CI_Citation/cit:title/gco:CharacterString/text()"
+            ],
+            multiplicity="0..*"
+        ),
+        ISOElement(
+            name="transfer-size",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:transferSize/gco:Real/text()"
+            ],
+            multiplicity="0..1"
+        ),
+        ISOElement(
+            name="units-of-distribution",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:unitsOfDistribution/gco:CharacterString/text()"
+            ],
+            multiplicity="0..1"
+        )
     ]
 
 
@@ -1297,8 +1334,7 @@ class ISODocument(MappedXmlDocument):
                 "gmd:distributionInfo/gmd:MD_Distribution/gmd:transferOptions/gmd:MD_DigitalTransferOptions/gmd:onLine/gmd:CI_OnlineResource",
                 "gmd:distributionInfo/gmd:MD_Distribution/gmd:distributor/gmd:MD_Distributor/gmd:distributorTransferOptions/gmd:MD_DigitalTransferOptions/gmd:onLine/gmd:CI_OnlineResource",
                 # 19115-3
-                "mdb:distributionInfo/mrd:MD_Distribution/mrd:transferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource",
-                "mdb:distributionInfo/mrd:MD_Distribution/mrd:distributor/mrd:MD_Distributor/mrd:distributorTransferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource"
+                "mdb:distributionInfo/mrd:MD_Distribution/mrd:transferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource | mdb:distributionInfo/mrd:MD_Distribution/mrd:distributor/mrd:MD_Distributor/mrd:distributorTransferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource"
             ],
             multiplicity="*",
         ),
