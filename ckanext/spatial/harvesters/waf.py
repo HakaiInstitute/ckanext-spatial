@@ -12,6 +12,7 @@ from ckan import model
 from ckan.logic import ValidationError, NotFound, get_action
 
 from ckan.plugins.core import SingletonPlugin, implements
+from pylons import config
 
 from ckanext.harvest.interfaces import IHarvester
 from ckanext.harvest.model import HarvestObject
@@ -228,8 +229,11 @@ class WAFHarvester(SpatialHarvester, SingletonPlugin):
                 len(ids), len(new), len(change), len(delete)))
             return ids
         else:
-            self._save_gather_error('No records to change',
-                                     harvest_job)
+            if config.get('ckan.harvest.status_mail.all', False):
+                self._save_gather_error('No records to change',
+                                         harvest_job)
+            else:
+                log.debug('No records to change')
             return []
 
     def fetch_stage(self, harvest_object):

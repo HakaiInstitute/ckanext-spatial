@@ -94,3 +94,9 @@ def get_common_map_config():
     '''
     namespace = 'ckanext.spatial.common_map.'
     return dict([(k.replace(namespace, ''), v) for k, v in config.iteritems() if k.startswith(namespace)])
+
+def spatial_get_map_initial_max_zoom(pkg):
+    max_zoom = h.get_pkg_dict_extra(pkg, 'spatial_initial_max_zoom') or \
+        pkg.get('spatial_initial_max_zoom') or \
+        config.get('ckanext.spatial.initial_max_zoom', 9)
+    return max_zoom

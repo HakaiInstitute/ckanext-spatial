@@ -149,6 +149,7 @@ class SpatialMetadata(p.SingletonPlugin):
                 'get_common_map_config' : spatial_helpers.get_common_map_config,
                 'spatial_widget_expands': spatial_helpers.spatial_widget_expands,
                 'spatial_default_extent': spatial_helpers.spatial_default_extent,
+                'spatial_get_map_initial_max_zoom': spatial_helpers.spatial_get_map_initial_max_zoom
                 }
 
 class SpatialQuery(p.SingletonPlugin):
