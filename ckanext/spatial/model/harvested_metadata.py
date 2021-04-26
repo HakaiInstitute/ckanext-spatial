@@ -1523,7 +1523,7 @@ class ISODocument(MappedXmlDocument):
         log.debug('%r', item)
         default = item.get('default').strip()
         # decode double escaped unicode chars
-        if(default and re.search(r'\\\\u[0-9a-fA-F]{4})', default)):
+        if(default and re.search(r'\\\\u[0-9a-fA-F]{4}', default)):
             default = default.decode("raw_unicode_escape")
         if isinstance(default, unicode):
             try:
@@ -1542,7 +1542,7 @@ class ISODocument(MappedXmlDocument):
             LangValue = item.get('local').get('value')
             LangValue = LangValue.strip()
             # decode double escaped unicode chars
-            if(LangValue and re.search(r'\\\\u[0-9a-fA-F]{4})', LangValue)):
+            if(LangValue and re.search(r'\\\\u[0-9a-fA-F]{4}', LangValue)):
                 LangValue = LangValue.decode("raw_unicode_escape")
 
             log.debug('%r', LangValue)
