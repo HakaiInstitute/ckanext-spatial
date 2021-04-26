@@ -1489,6 +1489,8 @@ class ISODocument(MappedXmlDocument):
             values['metadata-language'] = values['metadata-language'][:2].lower()
 
     def calculate_identifier(self, identifier):
+        if isinstance(identifier, str):
+            return identifier
         code = identifier.get('code')
         codeSpace = identifier.get('code-space')
         authority = identifier.get('authority')
@@ -1518,12 +1520,16 @@ class ISODocument(MappedXmlDocument):
         # not encode.
         out = {}
 
+        log.debug('%r', item)
         default = item.get('default').strip()
+        # decode double escaped unicode chars
+        if(default and re.search(r'\\\\u[0-9a-fA-F]{4})', default)):
+            default = default.decode("raw_unicode_escape")
         if isinstance(default, unicode):
             try:
-                default = default.encode('latin1')
-            except Exception:
                 default = default.encode('utf-8')
+            except Exception:
+                log.error('Failed to encode string "%r" as utf-8', default)
         if len(default) > 1:
             out.update({defaultLangKey: default})
 
@@ -1531,17 +1537,20 @@ class ISODocument(MappedXmlDocument):
         if isinstance(local, dict):
             langKey = self.cleanLangKey(local.get('language_code'))
             if isinstance(langKey, unicode):
-                langKey = langKey.encode('latin1')
+                langKey = langKey.encode('utf-8')
 
             LangValue = item.get('local').get('value')
             LangValue = LangValue.strip()
+            # decode double escaped unicode chars
+            if(LangValue and re.search(r'\\\\u[0-9a-fA-F]{4})', LangValue)):
+                LangValue = LangValue.decode("raw_unicode_escape")
+
+            log.debug('%r', LangValue)
             if isinstance(LangValue, unicode):
                 try:
-                    LangValue = LangValue.encode('latin1')
-                except Exception:
-                    log.debug('Failed to encode string "%r" as latin1, trying encoding as utf8', LangValue)
                     LangValue = LangValue.encode('utf-8')
-                    log.debug('Encoding as utf8 was successful')
+                except Exception:
+                    log.error('Failed to encode string "%r" as utf-8', LangValue)
             if len(LangValue) > 1:
                 out.update({langKey: LangValue})
 
@@ -1590,7 +1599,6 @@ class ISODocument(MappedXmlDocument):
     def infer_spatial(self, values):
         geom = None
         for xmlGeom in values.get('spatial', []):
-            log.debug('Harvesting Spatial:%r', xmlGeom)
             try:
                 geom = ogr.CreateGeometryFromGML(xmlGeom)
             except Exception:
