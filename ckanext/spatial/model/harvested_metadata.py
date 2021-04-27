@@ -264,6 +264,43 @@ class ISOResourceLocator(ISOElement):
             ],
             multiplicity="0..1",
         ),
+        ISOElement(
+            name="distribution-format",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:distributionFormat/mrd:MD_Format/mrd:formatSpecificationCitation/cit:CI_Citation/cit:title/gco:CharacterString/text()"
+            ],
+            multiplicity="0..*"
+        ),
+
+        ISOElement(
+            name="distributor-format",
+            search_paths=[
+                "ancestor::mrd:MD_Distributor/mrd:distributorFormat/mrd:MD_Format/mrd:formatSpecificationCitation/cit:CI_Citation/cit:title/gco:CharacterString/text()"
+            ],
+            multiplicity="0..*"
+        ),
+
+        ISOElement(
+            name="offline",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:offLine/mrd:MD_Medium/cit:CI_Citation/cit:title/gco:CharacterString/text()"
+            ],
+            multiplicity="0..*"
+        ),
+        ISOElement(
+            name="transfer-size",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:transferSize/gco:Real/text()"
+            ],
+            multiplicity="0..1"
+        ),
+        ISOElement(
+            name="units-of-distribution",
+            search_paths=[
+                "ancestor::mrd:MD_DigitalTransferOptions/mrd:unitsOfDistribution/gco:CharacterString/text()"
+            ],
+            multiplicity="0..1"
+        )
     ]
 
 
@@ -1363,8 +1400,7 @@ class ISODocument(MappedXmlDocument):
                 "gmd:distributionInfo/gmd:MD_Distribution/gmd:transferOptions/gmd:MD_DigitalTransferOptions/gmd:onLine/gmd:CI_OnlineResource",
                 "gmd:distributionInfo/gmd:MD_Distribution/gmd:distributor/gmd:MD_Distributor/gmd:distributorTransferOptions/gmd:MD_DigitalTransferOptions/gmd:onLine/gmd:CI_OnlineResource",
                 # 19115-3
-                "mdb:distributionInfo/mrd:MD_Distribution/mrd:transferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource",
-                "mdb:distributionInfo/mrd:MD_Distribution/mrd:distributor/mrd:MD_Distributor/mrd:distributorTransferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource"
+                "mdb:distributionInfo/mrd:MD_Distribution/mrd:transferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource | mdb:distributionInfo/mrd:MD_Distribution/mrd:distributor/mrd:MD_Distributor/mrd:distributorTransferOptions/mrd:MD_DigitalTransferOptions/mrd:onLine/cit:CI_OnlineResource"
             ],
             multiplicity="*",
         ),
@@ -1556,6 +1592,8 @@ class ISODocument(MappedXmlDocument):
             values['metadata-language'] = values['metadata-language'][:2].lower()
 
     def calculate_identifier(self, identifier):
+        if isinstance(identifier, str):
+            return identifier
         code = identifier.get('code')
         codeSpace = identifier.get('code-space')
         authority = identifier.get('authority')
@@ -1585,12 +1623,16 @@ class ISODocument(MappedXmlDocument):
         # not encode.
         out = {}
 
+        log.debug('%r', item)
         default = item.get('default').strip()
+        # decode double escaped unicode chars
+        if(default and re.search(r'\\\\u[0-9a-fA-F]{4}', default)):
+            default = default.decode("raw_unicode_escape")
         if isinstance(default, unicode):
             try:
-                default = default.encode('latin1')
-            except Exception:
                 default = default.encode('utf-8')
+            except Exception:
+                log.error('Failed to encode string "%r" as utf-8', default)
         if len(default) > 1:
             out.update({defaultLangKey: default})
 
@@ -1598,17 +1640,20 @@ class ISODocument(MappedXmlDocument):
         if isinstance(local, dict):
             langKey = self.cleanLangKey(local.get('language_code'))
             if isinstance(langKey, unicode):
-                langKey = langKey.encode('latin1')
+                langKey = langKey.encode('utf-8')
 
             LangValue = item.get('local').get('value')
             LangValue = LangValue.strip()
+            # decode double escaped unicode chars
+            if(LangValue and re.search(r'\\\\u[0-9a-fA-F]{4}', LangValue)):
+                LangValue = LangValue.decode("raw_unicode_escape")
+
+            log.debug('%r', LangValue)
             if isinstance(LangValue, unicode):
                 try:
-                    LangValue = LangValue.encode('latin1')
-                except Exception:
-                    log.debug('Failed to encode string "%r" as latin1, trying encoding as utf8', LangValue)
                     LangValue = LangValue.encode('utf-8')
-                    log.debug('Encoding as utf8 was successful')
+                except Exception:
+                    log.error('Failed to encode string "%r" as utf-8', LangValue)
             if len(LangValue) > 1:
                 out.update({langKey: LangValue})
 
@@ -1660,7 +1705,6 @@ class ISODocument(MappedXmlDocument):
     def infer_spatial(self, values):
         geom = None
         for xmlGeom in values.get('spatial', []):
-            log.debug('Harvesting Spatial:%r', xmlGeom)
             try:
                 geom = ogr.CreateGeometryFromGML(xmlGeom)
             except Exception:
