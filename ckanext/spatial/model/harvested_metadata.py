@@ -557,7 +557,12 @@ class ISOLocalised(ISOElement):
                         "lan:LocalisedCharacterString/@locale",
                     ],
                     multiplicity="0..1",
-                )
+                ),
+                ISOElement(
+                    name="translation_method",
+                    search_paths=["@xlink:title"],
+                    multiplicity="0..1",
+                ),
             ]
         )
     ]
@@ -1652,6 +1657,7 @@ class ISODocument(MappedXmlDocument):
         values['keywords'] = value
 
     def infer_multilinguale(self, values):
+        toAdd = {}
         for key in values:
             value = values[key]
 
@@ -1666,6 +1672,13 @@ class ISODocument(MappedXmlDocument):
                 defaultLangKey = self.cleanLangKey(values.get('metadata-language', 'en'))
                 LangDict = self.local_to_dict(values[key], defaultLangKey)
                 values[key] = json.dumps(LangDict)
+
+                local = value.get('local')
+                if isinstance(local, dict):
+                    langKey = self.cleanLangKey(local.get('language_code'))
+                    transMethod = local.get('translation_method')
+                    toAdd[key + '_translation_method'] = json.dumps({langKey: transMethod})
+        values.update(toAdd)
 
     def infer_spatial(self, values):
         geom = None
