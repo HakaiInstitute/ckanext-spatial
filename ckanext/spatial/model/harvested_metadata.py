@@ -1818,7 +1818,12 @@ class ISODocument(MappedXmlDocument):
         if identifier:
             doi = self.calculate_identifier(identifier)
             # strip https://doi.org/ and the like
-            doi = re.sub(r'^http.*doi\.org/', '', doi, flags=re.IGNORECASE)
+            doi = re.sub(r'^.*doi\.org/?_?', '', doi, flags=re.IGNORECASE)
+            if isinstance(identifier, dict):
+                version = identifier.get('version')
+                if version:
+                    pattern = re.escape(f'_{version}')
+                    doi = re.sub(pattern, '', doi, flags=re.IGNORECASE)
             if doi and re.match(r'^10.\d{4,9}\/[-._;()/:A-Z0-9]+$', doi, re.IGNORECASE):
                 value['DOI'] = doi
         # TODO: could we have more then one doi?
