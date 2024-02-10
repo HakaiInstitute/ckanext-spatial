@@ -1818,7 +1818,7 @@ class ISODocument(MappedXmlDocument):
         if identifier:
             doi = self.calculate_identifier(identifier)
             # strip https://doi.org/ and the like
-            doi = re.sub(r'^.*doi\.org/?_?', '', doi, flags=re.IGNORECASE)
+            doi = re.sub(r'^.*doi\.org[/_]*', '', doi, flags=re.IGNORECASE)
             if isinstance(identifier, dict):
                 version = identifier.get('version')
                 if version:
