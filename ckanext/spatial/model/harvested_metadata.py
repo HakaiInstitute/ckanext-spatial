@@ -1949,7 +1949,7 @@ class ISODocument(MappedXmlDocument):
                 if ',' in ind:  # string is last name first so split on commas
                     name_list = ind.split(',')
                     value['author'].append({
-                        "given": name_list[1].strip(),
+                        "given": ' '.join(name_list[1:99]).strip(), # if only a last name this will be an empty string
                         "family": name_list[0]
                     })
                 else:  # fall back to spliting on spaces
