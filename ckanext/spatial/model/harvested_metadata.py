@@ -1860,7 +1860,7 @@ class ISODocument(MappedXmlDocument):
             return ''
         authority = uri_dict.get('authority')
         code_space = uri_dict.get('code-space') or default_code_space or ''
-        code = uri_dict.get('code')
+        code = uri_dict.get('code') or ''
         version = uri_dict.get('version')
         if not code:
             return ''
