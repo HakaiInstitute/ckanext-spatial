@@ -17,6 +17,7 @@ from ckan import plugins as p
 from ckan.lib.search import SearchError
 
 from ckan.lib.helpers import json
+from ckanext.spatial import logic
 
 if tk.check_ckan_version(min_version="2.9.0"):
     from ckanext.spatial.plugin.flask_plugin import (
@@ -126,6 +127,7 @@ class SpatialMetadata(p.SingletonPlugin):
 
 class SpatialQuery(SpatialQueryMixin, p.SingletonPlugin):
 
+    p.implements(p.IRoutes, inherit=True)
     p.implements(p.IPackageController, inherit=True)
     p.implements(p.IConfigurer, inherit=True)
 

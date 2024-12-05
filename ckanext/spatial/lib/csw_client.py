@@ -94,7 +94,7 @@ class CswService(OwsService):
         if csw.exceptionreport:
             err = 'Error getting records: %r' % \
                   csw.exceptionreport.exceptions
-            #log.error(err)
+            log.error(err)
             raise CswError(err)
         return [self._xmd(r) for r in list(csw.records.values())]
 

@@ -46,7 +46,7 @@ def set_keywords(pycsw_config_file, pycsw_config, ckan_url, limit=20):
     log.info("Fetching tags from %s", ckan_url)
     url = ckan_url + "api/tag_counts"
     response = requests.get(url)
-    tags = response.json()
+    tags = response.result.json()
 
     log.info("Deriving top %d tags", limit)
     # uniquify and sort by top limit
@@ -133,7 +133,7 @@ def load(pycsw_config, ckan_url):
 
     for ckan_id in new:
         ckan_info = gathered_records[ckan_id]
-        record = get_record(context, repo, ckan_url, ckan_id, ckan_info)
+        record = get_record(context, repo, ckan_url, ckan_id, ckan_info, pycsw_config)
         if not record:
             log.info("Skipped record %s" % ckan_id)
             continue
@@ -145,7 +145,7 @@ def load(pycsw_config, ckan_url):
 
     for ckan_id in changed:
         ckan_info = gathered_records[ckan_id]
-        record = get_record(context, repo, ckan_url, ckan_id, ckan_info)
+        record = get_record(context, repo, ckan_url, ckan_id, ckan_info, pycsw_config)
         if not record:
             continue
         update_dict = dict(

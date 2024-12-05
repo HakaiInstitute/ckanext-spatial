@@ -27,7 +27,7 @@
                                     mapConfig,
                                     leafletMapOptions,
                                     leafletBaseLayerOptions) {
-
+                                      
       var isHttps = window.location.href.substring(0, 5).toLowerCase() === 'https';
       var mapConfig = mapConfig || {type: 'stamen'};
       var leafletMapOptions = leafletMapOptions || {};
@@ -80,33 +80,65 @@
         baseLayer = L.tileLayer.provider(mapConfig.type, mapConfig)
 
       } else {
-        let c = L.Control.extend({
+        // Default to Stamen base map
+        baseLayerUrl = 'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png?api_key=' + mapConfig['stadia.api_key'];
+        leafletBaseLayerOptions.subdomains = mapConfig.subdomains || 'abcd';
+        leafletBaseLayerOptions.attribution = mapConfig.attribution || '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> <a href="https://stamen.com/" target="_blank">&copy; Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/about" target="_blank">OpenStreetMap</a> contributors';
 
-          onAdd: (map) => {
-            let element = document.createElement("div");
-            element.className = "leaflet-control-no-provider";
-            element.innerHTML = 'No map provider set. Please check the <a href="https://docs.ckan.org/projects/ckanext-spatial/en/latest/map-widgets.html">documentation</a>';
-            return element;
-          },
-          onRemove: (map) => {}
-        })
-        map.addControl(new c({position: "bottomleft"}))
-
+        baseLayer = new L.TileLayer(baseLayerUrl, leafletBaseLayerOptions);
+        //baseLayer = new L.maplibreGL(baseLayerUrl, leafletBaseLayerOptions);
       }
 
       if (baseLayer) {
         let attribution = L.control.attribution({"prefix": false});
         attribution.addTo(map)
 
-        map.addLayer(baseLayer);
-
-        if (mapConfig.attribution) {
-          attribution.addAttribution(mapConfig.attribution);
-        }
+      function getColor(i) {
+          pallet = ["#1f78b4","#e31a1c","#fb9a99","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#a6cee3","#b2df8a","#33a02c"];
+          if(i>10){
+            return '#FFEDA0';
+          }
+          return pallet[i];
       }
 
-      return map;
+      function myStyle(i) {
+        return {
+          "color": getColor(i),
+          "weight": 2,
+          "opacity": 1,
+          "fillColor": getColor(i),
+          "fillOpacity": 0.1,
+          "clickable": false
+        };
+      }
 
+      let urls = []
+      if (mapConfig.geojsonlayerurls) {
+        urls = JSON.parse(mapConfig.geojsonlayerurls);
+        var GJLayers = L.layerGroup().addTo(map)
+        for(const [i, url] of urls.entries()){
+          fetch(
+            url
+          ).then(
+            res => res.json()
+          ).then(
+            data => GJLayers.addLayer(
+              L.geoJSON(
+                data,
+                {
+                  style: myStyle(i),
+                  onEachFeature: function (feature, layer) {
+                    if(feature.properties && feature.properties.name){
+                      layer.bindPopup(feature.properties.name);
+                    }
+                  }
+                }
+              )
+            )            
+          )
+        }
+      }
+      return map;
   }
 
 })(this.ckan, this.jQuery);

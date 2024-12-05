@@ -1,4 +1,5 @@
 import os
+import cioos_iso_validate as cioos_iso_validate
 from pkg_resources import resource_stream
 from ckanext.spatial.harvested_metadata import ISODocument
 
@@ -44,8 +45,12 @@ class XsdValidator(BaseValidator):
         Returns:
           (is_valid, [(error_message_string, error_line_number)])
         '''
-        xsd = etree.parse(xsd_filepath)
-        schema = etree.XMLSchema(xsd)
+        try:
+            xsd = etree.parse(xsd_filepath)
+            schema = etree.XMLSchema(xsd)
+        except Exception as e:
+            log.error(e)
+
         # With libxml2 versions before 2.9, this fails with this error:
         #    gmx_schema = etree.XMLSchema(gmx_xsd)
         # File "xmlschema.pxi", line 103, in
@@ -65,6 +70,58 @@ class XsdValidator(BaseValidator):
             return False, errors
         return True, []
 
+
+class ISO19115Schema(XsdValidator):
+    name = 'iso19115'
+    title = 'ISO19115 XSD Schema'
+
+    @classmethod
+    def is_valid(cls, xml):
+        xsd_path = 'xml/iso19115-3/standards.iso.org/iso/19115/-3'
+        mdb_xsd_filepath = os.path.join(os.path.dirname(__file__),
+                                        xsd_path, 'mds/2.0/mds.xsd')
+        xsd_name = 'Dataset schema 2.0 (mds.xsd)'
+        is_valid, errors = cls._is_valid(xml, mdb_xsd_filepath, xsd_name)
+        if not is_valid:
+            # TODO: not sure if we need this one,
+            # keeping for backwards compatibility
+            errors.insert(0, ('{0} Validation Error'.format(xsd_name), None))
+        return is_valid, errors
+
+class ISO19115v2Schema(XsdValidator):
+    name = 'iso19115v2'
+    title = 'ISO19115-2 XSD Schema'
+
+    @classmethod
+    def is_valid(cls, xml):
+        xsd_path = 'xml/iso19115-2/19115/-2'
+        mdb_xsd_filepath = os.path.join(os.path.dirname(__file__),
+                                        xsd_path, 'gmi/1.0/gmi.xsd')
+        xsd_name = 'Dataset schema 2.0 (gmi.xsd)'
+        is_valid, errors = cls._is_valid(xml, mdb_xsd_filepath, xsd_name)
+        if not is_valid:
+            # TODO: not sure if we need this one,
+            # keeping for backwards compatibility
+            errors.insert(0, ('{0} Validation Error'.format(xsd_name), None))
+        return is_valid, errors
+
+
+class ISO19115v1Schema(XsdValidator):
+    name = 'iso19115v1'
+    title = 'ISO19115-3 v1.0 XSD Schema'
+
+    @classmethod
+    def is_valid(cls, xml):
+        xsd_path = 'xml/iso19115-3/standards.iso.org/iso/19115/-3'
+        mdb_xsd_filepath = os.path.join(os.path.dirname(__file__),
+                                        xsd_path, 'mds/1.0/mds.xsd')
+        xsd_name = 'Dataset schema 1.0 (mds.xsd)'
+        is_valid, errors = cls._is_valid(xml, mdb_xsd_filepath, xsd_name)
+        if not is_valid:
+            # TODO: not sure if we need this one,
+            # keeping for backwards compatibility
+            errors.insert(0, ('{0} Validation Error'.format(xsd_name), None))
+        return is_valid, errors
 
 class ISO19139Schema(XsdValidator):
     name = 'iso19139'
@@ -244,7 +301,14 @@ class SchematronValidator(BaseValidator):
         location = failed_assert_element.get('location')
         message_element = failed_assert_element.find(
             "{http://purl.oclc.org/dsdl/svrl}text")
-        message = message_element.text.strip()
+        if not message_element:
+            message_element = failed_assert_element.find("{http://purl.oclc.org/dsdl/svrl}diagnostic-reference[@{http://www.w3.org/XML/1998/namespace}lang='en']")
+        if not message_element:
+            message_element = failed_assert_element.find("{http://purl.oclc.org/dsdl/svrl}diagnostic-reference")
+        if not message_element:
+            message = 'Missing required field'
+        else:
+            message = message_element.text.strip()
 
         # TODO: Do we really need such detail on the error messages?
         return message, 'Error Message: "%s"  Error Location: "%s"  Error Assert: "%s"' % (message, location, assert_)
@@ -268,6 +332,30 @@ class SchematronValidator(BaseValidator):
                 compiled = xform(compiled)
         return etree.XSLT(compiled)
 
+class ISO19115Schematron(SchematronValidator):
+    name = 'iso19115schematron'
+    title = 'ISO19115 Schematron'
+
+    @classmethod
+    def get_schematrons(cls):
+        with resource_stream(
+                __name__,
+                "xml/iso19115-3/standards.iso.org/iso/19115/-3/mdb/1.0/mdb.sch") as schema:
+
+            return [cls.schematron(schema)]
+
+class CIOOSSchematron(SchematronValidator):
+    name = 'CIOOSschematron'
+    title = 'CIOOS Schematron'
+
+    @classmethod
+    def get_schematrons(cls):
+        sch_path = os.path.dirname(os.path.relpath(cioos_iso_validate.__file__, os.path.dirname(os.path.abspath(__file__)))) + '/schematron/cioos.sch'
+        with resource_stream(
+                __name__,
+                sch_path) as schema:
+
+            return [cls.schematron(schema)]
 
 class ConstraintsSchematron(SchematronValidator):
     name = 'constraints'
@@ -316,10 +404,15 @@ class Gemini2Schematron13(SchematronValidator):
                              "xml/gemini2/Gemini2_R1r3.sch") as schema:
             return [cls.schematron(schema)]
 
-all_validators = (ISO19139Schema,
+all_validators = (ISO19115Schema,
+                  ISO19115v2Schema,
+                  ISO19115v1Schema,
+                  ISO19139Schema,
                   ISO19139EdenSchema,
                   ISO19139NGDCSchema,
                   FGDCSchema,
+                  ISO19115Schematron,
+                  CIOOSSchematron,
                   ConstraintsSchematron,
                   ConstraintsSchematron14,
                   Gemini2Schematron,

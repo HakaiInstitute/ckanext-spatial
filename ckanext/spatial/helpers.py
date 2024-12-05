@@ -7,6 +7,31 @@ from ckantoolkit import config
 
 log = logging.getLogger(__name__)
 
+def spatial_widget_expands():
+    '''Return the value of the spatial_widget_expands config setting.
+
+    To disable expanding of the spatial widget when drawing search box, add this line to the
+    [app:main] section of your CKAN config file::
+
+      ckan.spatial.spatial_widget_expands = False
+
+    Returns ``True`` by default, if the setting is not in the config file.
+
+    :rtype: bool
+
+    '''
+    value = config.get('ckan.spatial.spatial_widget_expands', True)
+    value = p.toolkit.asbool(value)
+    return value
+
+def spatial_default_extent():
+    '''Return the value of the ckanext.spatial.default_extent config setting.
+
+    :rtype: text
+
+    '''
+    value = config.get('ckanext.spatial.default_extent')
+    return value
 
 def get_reference_date(date_str):
     '''
@@ -70,3 +95,9 @@ def get_common_map_config():
     '''
     namespace = 'ckanext.spatial.common_map.'
     return dict([(k.replace(namespace, ''), v) for k, v in config.items() if k.startswith(namespace)])
+
+def spatial_get_map_initial_max_zoom(pkg):
+    max_zoom = h.get_pkg_dict_extra(pkg, 'spatial_initial_max_zoom') or \
+        pkg.get('spatial_initial_max_zoom') or \
+        config.get('ckanext.spatial.initial_max_zoom', 9)
+    return max_zoom

@@ -1,8 +1,7 @@
-.module-narrow #dataset-map-container {
-  height: 200px;
-  font-size: 14px;
+.module-narrow #dataset-map-container, .module-narrow #dataset-map-form-container {
+  height: 225px;
 }
-.module-content #dataset-map-container {
+.module-content #dataset-map-container, .module-content #dataset-map-form-container {
   height: 250px;
 }
 .module-heading .action {
@@ -34,19 +33,26 @@
 #dataset-map-edit-buttons {
   display: none;
 }
-.leaflet-touch .leaflet-draw-toolbar a.leaflet-draw-draw-rectangle {
+
+#dataset-map-container .leaflet-draw-toolbar a.leaflet-draw-draw-rectangle {
   background-image: url("../img/pencil.png");
   background-repeat: no-repeat;
   background-position: 50% 50%;
   background-size: 12px 12px;
   border-radius: 4px;
 }
-.leaflet-draw-actions li {
+
+#dataset-map-form-container .leaflet-draw-toolbar a.leaflet-draw-draw-rectangle {
+background-position: -60px -1px;
+}
+
+.leaflet-draw-toolbar-top ~ .leaflet-draw-actions li{
   display: none;
 }
 
-#draw-map-container {
-  width: 870px;
+.dataset-map-expanded #dataset-map {
+  position: absolute;
+  width: 940px;
   height: 384px;
   background-color: white;
   border: 1px solid #CCC;
@@ -55,4 +61,13 @@
 
 .modal-spatial-query {
   max-width: 900px;
+}
+
+.leaflet-control-layers label:after {
+  content: unset;
+}
+
+.leaflet-touch .leaflet-control-layers-toggle {
+  width: 30px;
+  height: 30px;
 }

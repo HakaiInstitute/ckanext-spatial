@@ -31,9 +31,11 @@ from ckanext.harvest.harvesters.base import HarvesterBase
 from ckanext.harvest.model import HarvestObject
 
 from ckanext.spatial.validation import Validators, all_validators
-from ckanext.spatial.harvested_metadata import ISODocument
+from ckanext.spatial.model import ISODocument, ISODocument_iso19139
 from ckanext.spatial.interfaces import ISpatialHarvester
 from ckantoolkit import config
+
+from unidecode import unidecode
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +56,10 @@ def guess_standard(content):
     if '</gmd:MD_Metadata>'.lower() in lowered:
         return 'iso'
     if '</gmi:MI_Metadata>'.lower() in lowered:
+        return 'iso'
+    if '</mdb:MD_Metadata>'.lower() in lowered:
+        return 'iso'
+    if '</mdi:MI_Metadata>'.lower() in lowered:
         return 'iso'
     if '</metadata>'.lower() in lowered:
         return 'fgdc'
@@ -187,6 +193,68 @@ class SpatialHarvester(HarvesterBase):
     {"type": "Polygon", "coordinates": [[[$xmin, $ymin], [$xmax, $ymin], [$xmax, $ymax], [$xmin, $ymax], [$xmin, $ymin]]]}
     ''')
 
+
+    # helper functions copied from ckan harvester
+
+    api_version = 2
+    action_api_version = 3
+
+    def _get_action_api_offset(self):
+        return '/api/%d/action' % self.action_api_version
+
+    def _get_search_api_offset(self):
+        return '%s/package_search' % self._get_action_api_offset()
+
+    def _get_content(self, url):
+        http_request = Request(url=url)
+
+        api_key = self.config.get('api_key')
+        if api_key:
+            http_request.add_header('Authorization', api_key)
+
+        try:
+            http_response = urlopen(http_request)
+        except HTTPError as e:
+            if e.getcode() == 404:
+                raise ContentNotFoundError('HTTP error: %s' % e.code)
+            else:
+                raise ContentFetchError('HTTP error: %s' % e.code)
+        except URLError as e:
+            raise ContentFetchError('URL error: %s' % e.reason)
+        except HTTPException as e:
+            raise ContentFetchError('HTTP Exception: %s' % e)
+        except socket.error as e:
+            raise ContentFetchError('HTTP socket error: %s' % e)
+        except Exception as e:
+            raise ContentFetchError('HTTP general exception: %s' % e)
+        return http_response.read()
+
+    def _get_group(self, base_url, group):
+        url = base_url + self._get_action_api_offset() + '/group_show?id=' + \
+            group['id']
+        try:
+            content = self._get_content(url)
+            data = json.loads(content)
+            if self.action_api_version == 3:
+                return data.pop('result')
+            return data
+        except (ContentFetchError, ValueError):
+            log.debug('Could not fetch/decode remote group')
+            raise RemoteResourceError('Could not fetch/decode remote group')
+
+    def _get_organization(self, base_url, org_name):
+        url = base_url + self._get_action_api_offset() + \
+            '/organization_show?id=' + org_name
+        try:
+            content = self._get_content(url)
+            content_dict = json.loads(content)
+            return content_dict['result']
+        except (ContentFetchError, ValueError, KeyError):
+            log.debug('Could not fetch/decode remote group')
+            raise RemoteResourceError(
+                'Could not fetch/decode remote organization')
+
+
     ## IHarvester
 
     def validate_config(self, source_config):
@@ -289,11 +357,71 @@ class SpatialHarvester(HarvesterBase):
             'resources': [],
         }
 
-        # We need to get the owner organization (if any) from the harvest
-        # source dataset
-        source_dataset = model.Package.get(harvest_object.source.id)
-        if source_dataset.owner_org:
-            package_dict['owner_org'] = source_dataset.owner_org
+        # Get owner organization (if any) from the harvest source dataset
+
+        base_context = {'model': model, 'session': model.Session, 'user': self._get_user_name()}
+        source_dataset = logic.get_action('package_show')(base_context.copy(), {'id': harvest_object.source.id})
+        # Save local orginization from harvest object for later. If we cant use
+        # the remote orginization this will be the fall back
+        local_org = source_dataset.get('owner_org')
+
+        log.debug("LOCAL_ORG: %s" ,local_org )
+        remote_orgs = self.source_config.get('remote_orgs', None)
+        log.debug("REMOTE_ORGS: %s" ,remote_orgs )
+
+        ## get mapping from config, if it exists
+        organization_mapping = self.source_config.get('organization_mapping', {})
+        log.info("organization_mapping: %s",organization_mapping)
+
+        if not remote_orgs in ('only_local', 'create'):
+            # Assign dataset to the local harvest organization
+            package_dict['owner_org'] = local_org
+        else:
+            if not 'owner_org' in package_dict:
+                package_dict['owner_org'] = None
+
+            validated_org = None
+            resp_org = None
+            meta_org = None
+
+            # populate orginization options from iso metadata
+            if iso_values.get('responsible-organisation'):
+                resp_org = iso_values.get('responsible-organisation')[0].get('organisation-name','')
+            if iso_values.get('metadata-point-of-contact'):
+                meta_org = iso_values.get('metadata-point-of-contact')[0].get('organisation-name','')
+
+            log.info("Found remote orginization options of: '%s', '%s', '%s'",package_dict['owner_org'], resp_org, meta_org)
+            remote_org = package_dict['owner_org'] or resp_org or meta_org
+            log.info("Using '%s' for remote orginization" ,remote_org )
+
+            # Map remote organization to local ones
+            if organization_mapping:
+                remote_org_name = organization_mapping.get(remote_org, remote_org)
+                remote_org = remote_org_name or remote_org or None
+
+            if remote_org:
+                # transliterat any unicode characters in org name into something similar in ascii
+                remote_org_clean = unidecode(remote_org)
+                # ckan supports only alphanumeric with underscores and dashes in org names
+                remote_org_clean = re.sub(r"[^\w_-]+", "-",remote_org_clean).lower()
+                remote_org_clean = remote_org_clean.replace("--","-")
+                remote_org_clean = remote_org_clean[:100]
+                try:
+                    data_dict = {'id': remote_org_clean}
+                    org = logic.get_action('organization_show')(base_context.copy(), data_dict)
+                    validated_org = org['id']
+                    log.info("Found organization %s" , remote_org_clean)
+                except logic.NotFound as e:
+                    log.info('Organization %s is not available', remote_org)
+                    if remote_orgs == 'create':
+                        try:
+                            org = logic.get_action('organization_create')(base_context.copy(), {'name': remote_org_clean, 'title': remote_org, 'title_translated': '{"en":"%s", "fr":"%s"}' % (remote_org,remote_org)})
+                            log.info('Organization %s has been newly created', remote_org)
+                            validated_org = org['id']
+                        except (e):
+                            log.error('Could not create org %s : %e', remote_org, e)
+
+            package_dict['owner_org'] = validated_org or local_org
 
         # Package name
         package = harvest_object.package
@@ -326,7 +454,8 @@ class SpatialHarvester(HarvesterBase):
             'frequency-of-update',
             'spatial-data-service-type',
         ]:
-            extras[name] = iso_values[name]
+            if iso_values.get(name):
+                extras[name] = iso_values[name]
 
         if len(iso_values.get('progress', [])):
             extras['progress'] = iso_values['progress'][0]
@@ -359,6 +488,8 @@ class SpatialHarvester(HarvesterBase):
 
             context = {'model': model, 'session': model.Session, 'user': self._get_user_name()}
             license_list = p.toolkit.get_action('license_list')(context, {})
+            if isinstance(use_constraints, str):
+                use_constraints = [use_constraints]
 
             for constraint in use_constraints:
                 package_license = None
@@ -385,54 +516,60 @@ class SpatialHarvester(HarvesterBase):
             if browse_graphic.get('type'):
                 extras['graphic-preview-type'] = browse_graphic.get('type')
 
-
         for key in ['temporal-extent-begin', 'temporal-extent-end']:
-            if len(iso_values[key]) > 0:
+            if len(iso_values.get(key, '')) > 0:
                 extras[key] = iso_values[key][0]
 
         # Save responsible organization roles
-        if iso_values['responsible-organisation']:
+        if iso_values.get('responsible-organisation'):
             parties = {}
             for party in iso_values['responsible-organisation']:
-                if party['organisation-name'] in parties:
-                    if not party['role'] in parties[party['organisation-name']]:
+                if party.get('organisation-name') in parties:
+                    if not party.get('role') in parties[party['organisation-name']]:
                         parties[party['organisation-name']].append(party['role'])
                 else:
                     parties[party['organisation-name']] = [party['role']]
             extras['responsible-party'] = [{'name': k, 'roles': v} for k, v in parties.items()]
 
-        if len(iso_values['bbox']) > 0:
+        if len(iso_values.get('bbox',[])) > 0:
             bbox = iso_values['bbox'][0]
             extras['bbox-east-long'] = bbox['east']
             extras['bbox-north-lat'] = bbox['north']
             extras['bbox-south-lat'] = bbox['south']
             extras['bbox-west-long'] = bbox['west']
 
-            try:
-                xmin = float(bbox['west'])
-                xmax = float(bbox['east'])
-                ymin = float(bbox['south'])
-                ymax = float(bbox['north'])
-            except ValueError as e:
-                self._save_object_error('Error parsing bounding box value: {0}'.format(str(e)),
-                                    harvest_object, 'Import')
+            if iso_values.get('spatial'):
+                extras['spatial'] = iso_values['spatial']
             else:
-                # Construct a GeoJSON extent so ckanext-spatial can register the extent geometry
-
-                # Some publishers define the same two corners for the bbox (ie a point),
-                # that causes problems in the search if stored as polygon
-                if xmin == xmax or ymin == ymax:
-                    extent_string = Template('{"type": "Point", "coordinates": [$x, $y]}').substitute(
-                        x=xmin, y=ymin
-                    )
-                    self._save_object_error('Point extent defined instead of polygon',
-                                     harvest_object, 'Import')
+                try:
+                    xmin = float(bbox['west'])
+                    xmax = float(bbox['east'])
+                    ymin = float(bbox['south'])
+                    ymax = float(bbox['north'])
+                except ValueError as e:
+                    self._save_object_error('Error parsing bounding box value: {0}'.format(six.text_type(e)),
+                                        harvest_object, 'Import')
                 else:
-                    extent_string = self.extent_template.substitute(
-                        xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax
-                    )
+                    # Construct a GeoJSON extent so ckanext-spatial can register the extent geometry
 
-                extras['spatial'] = extent_string.strip()
+                    # Some publishers define the same two corners for the bbox (ie a point),
+                    # that causes problems in the search if stored as polygon
+                    # code assumes no horizontal or vertical lines but that is likely ok
+                    if xmin == xmax or ymin == ymax:
+                        extent_string = Template('{"type": "Point", "coordinates": [$x, $y]}').substitute(
+                            x=xmin, y=ymin
+                        )
+                        log.debug('Point extent defined instead of polygon')
+                        # point extent is not an error as the point is later
+                        # changed to a polygon for solr backend in plugin.py:L214
+                        # self._save_object_error('Point extent defined instead of polygon',
+                        #                  harvest_object, 'Import')
+                    else:
+                        extent_string = self.extent_template.substitute(
+                            xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax
+                        )
+
+                    extras['spatial'] = extent_string.strip()
         else:
             log.debug('No spatial extent defined for this object')
 
@@ -477,11 +614,14 @@ class SpatialHarvester(HarvesterBase):
                              harvest_source_url=harvest_object.job.source.url.strip('/'),
                              harvest_source_title=harvest_object.job.source.title,
                              harvest_job_id=harvest_object.job.id,
-                             harvest_object_id=harvest_object.id)
+                             harvest_object_id=harvest_object.id,
+			     dataset_id=harvest_object.package_id)
                  extras[key] = value
 
         extras_as_dict = []
         for key, value in extras.items():
+            if package_dict.get(key,''):
+                log.error('extras %s found in package dict: key:%s value:%s',key,key,value)
             if isinstance(value, (list, dict)):
                 extras_as_dict.append({'key': key, 'value': json.dumps(value)})
             else:
@@ -553,6 +693,7 @@ class SpatialHarvester(HarvesterBase):
             if content:
                 harvest_object.content = content
             else:
+                log.debug('original_document: %s', original_document)
                 self._save_object_error('Transformation to ISO failed', harvest_object, 'Import')
                 return False
         else:
@@ -572,10 +713,15 @@ class SpatialHarvester(HarvesterBase):
 
         # Parse ISO document
         try:
-
-            iso_parser = ISODocument(harvest_object.content)
+            if self.source_config.get('parser') == 'iso19139':
+                log.debug('Using ISO19139 parser')
+                iso_parser = ISODocument_iso19139(harvest_object.content)
+            else:
+                log.debug('Using ISO19115-3 parser')
+                iso_parser = ISODocument(harvest_object.content)
             iso_values = iso_parser.read_values()
         except Exception as e:
+            log.exception(e)
             self._save_object_error('Error parsing ISO document for object {0}: {1}'.format(harvest_object.id, str(e)),
                                     harvest_object, 'Import')
             return False
@@ -586,7 +732,7 @@ class SpatialHarvester(HarvesterBase):
             previous_object.add()
 
         # Update GUID with the one on the document
-        iso_guid = iso_values['guid']
+        iso_guid = iso_values.get('guid')
         if iso_guid and harvest_object.guid != iso_guid:
             # First make sure there already aren't current objects
             # with the same guid
@@ -677,7 +823,10 @@ class SpatialHarvester(HarvesterBase):
                 package_id = p.toolkit.get_action('package_create')(context, package_dict)
                 log.info('Created new package %s with guid %s', package_id, harvest_object.guid)
             except p.toolkit.ValidationError as e:
-                self._save_object_error('Validation Error: %s' % str(e.error_summary), harvest_object, 'Import')
+                # call refresh() on every instance this fixes issues [151](https://github.com/ckan/ckanext-harvest/issues/151) and [262](https://github.com/ckan/ckanext-harvest/issues/262)
+                for s in iter(model.Session):
+                   model.Session.refresh(s)
+                self._save_object_error('Validation Error: %s' % six.text_type(e.error_dict), harvest_object, 'Import')
                 return False
 
         elif status == 'change':
@@ -706,7 +855,8 @@ class SpatialHarvester(HarvesterBase):
                         pass
                     else:
                         for extra in package_dict.get('extras', []):
-                            if extra['key'] == 'harvest_object_id':
+                            if (extra['key'] in
+                                    ['harvest_object_id', 'h_object_id']):
                                 extra['value'] = harvest_object.id
                         if package_dict:
                             package_index = PackageSearchIndex()
@@ -723,7 +873,10 @@ class SpatialHarvester(HarvesterBase):
                     package_id = p.toolkit.get_action('package_update')(context, package_dict)
                     log.info('Updated package %s with guid %s', package_id, harvest_object.guid)
                 except p.toolkit.ValidationError as e:
-                    self._save_object_error('Validation Error: %s' % str(e.error_summary), harvest_object, 'Import')
+                    # call refresh() on every instance this fixes issues [151](https://github.com/ckan/ckanext-harvest/issues/151) and [262](https://github.com/ckan/ckanext-harvest/issues/262)
+                    for s in iter(model.Session):
+                        model.Session.refresh(s)
+                    self._save_object_error('Validation Error: %s' % six.text_type(e.error_dict), harvest_object, 'Import')
                     return False
 
         model.Session.commit()
@@ -851,7 +1004,7 @@ class SpatialHarvester(HarvesterBase):
         '''
         url = url.replace(' ', '%20')
         response = requests.get(url, timeout=10)
-
+        response.encoding = 'UTF-8'
         content = response.text
 
         # Remove original XML declaration
@@ -889,7 +1042,23 @@ class SpatialHarvester(HarvesterBase):
         valid, profile, errors = validator.is_valid(xml)
         if not valid:
             log.error('Validation errors found using profile {0} for object with GUID {1}'.format(profile, harvest_object.guid))
+            # call refresh() on every instance this fixes issues [151](https://github.com/ckan/ckanext-harvest/issues/151) and [262](https://github.com/ckan/ckanext-harvest/issues/262)
+            for s in iter(model.Session):
+                model.Session.refresh(s)
             for error in errors:
                 self._save_object_error(error[0], harvest_object, 'Validation', line=error[1])
 
         return valid, profile, errors
+
+class ContentFetchError(Exception):
+    pass
+
+class ContentNotFoundError(ContentFetchError):
+    pass
+
+class RemoteResourceError(Exception):
+    pass
+
+
+class SearchError(Exception):
+    pass

@@ -4,17 +4,19 @@ this.ckan.module('spatial-query', function ($, _) {
 
   return {
     options: {
-      i18n: {
-      },
+      i18n: {},
       style: {
-        color: '#F06F64',
+        color: "#F06F64",
         weight: 2,
         opacity: 1,
-        fillColor: '#F06F64',
+        fillColor: "#F06F64",
         fillOpacity: 0.1,
-        clickable: false
+        clickable: false,
       },
-      default_extent: [[90, 180], [-90, -180]]
+      default_extent: [
+        [90, 180],
+        [-90, -180],
+      ],
     },
     template: {
       buttons: [
@@ -65,14 +67,16 @@ this.ckan.module('spatial-query', function ($, _) {
       var module = this;
       $.proxyAll(this, /_on/);
 
-      var user_default_extent = this.el.data('default_extent');
-      if (user_default_extent ){
+      var user_default_extent = this.el.data("default_extent");
+      if (user_default_extent) {
         if (user_default_extent instanceof Array) {
           // Assume it's a pair of coords like [[90, 180], [-90, -180]]
-          this.options.default_extent = user_default_extent;
+          module.options.default_extent = user_default_extent;
         } else if (user_default_extent instanceof Object) {
           // Assume it's a GeoJSON bbox
-          this.options.default_extent = new L.GeoJSON(user_default_extent).getBounds();
+          module.options.default_extent = new L.GeoJSON(
+            user_default_extent
+          ).getBounds();
         }
       }
       this.el.ready(this._onReady);
@@ -151,24 +155,34 @@ this.ckan.module('spatial-query', function ($, _) {
     },
 
     _getParameterByName: function (name) {
-      var match = RegExp('[?&]' + name + '=([^&]*)')
-                        .exec(window.location.search);
-      return match ?
-          decodeURIComponent(match[1].replace(/\+/g, ' '))
-          : null;
+      var url = new URL(window.location.href);
+      var search_params = url.searchParams;
+      return search_params.get(name);
     },
 
-    _drawExtentFromCoords: function(xmin, ymin, xmax, ymax) {
-        if ($.isArray(xmin)) {
-            var coords = xmin;
-            xmin = coords[0]; ymin = coords[1]; xmax = coords[2]; ymax = coords[3];
-        }
-        return new L.Rectangle([[ymin, xmin], [ymax, xmax]],
-                               this.options.style);
+    _removeParameterByName: function (name) {
+      var url = new URL(window.location.href);
+      var search_params = url.searchParams;
+      search_params.delete(name);
+      url.search = search_params.toString();
+      window.history.pushState({}, "", url.toString());
     },
 
-    _drawExtentFromGeoJSON: function(geom) {
-        return new L.GeoJSON(geom, {style: this.options.style});
+    _drawExtentFromCoords: function (xmin, ymin, xmax, ymax) {
+      if ($.isArray(xmin)) {
+        var coords = xmin;
+        xmin = coords[0];
+        ymin = coords[1];
+        xmax = coords[2];
+        ymax = coords[3];
+      }
+      return new L.Rectangle(
+        [
+          [ymin, xmin],
+          [ymax, xmax],
+        ],
+        this.options.style
+      );
     },
 
     _onApply: function() {
@@ -187,7 +201,11 @@ this.ckan.module('spatial-query', function ($, _) {
         this.options.map_config,
         {
           attributionControl: false,
-          drawControlTooltips: false
+          drawControlTooltips: false,
+          fullscreenControl: true,
+          fullscreenControlOptions: {
+            position: "topleft",
+          },
         }
       );
 

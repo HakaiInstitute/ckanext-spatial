@@ -2,7 +2,7 @@ try:
     from ckan.tests.pytest_ckan.ckan_setup import *
 except ImportError:
     from ckan.config.middleware import make_app
-    from ckan.common import config
+    from ckantoolkit import config
 
     import pkg_resources
     from paste.deploy import loadapp

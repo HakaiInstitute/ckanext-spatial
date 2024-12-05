@@ -12,8 +12,10 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.exc import DataError
 
 from ckan import model
+from ckan.logic import ValidationError, NotFound, get_action
 
 from ckan.plugins.core import SingletonPlugin, implements
+from ckantoolkit import config
 
 from ckanext.harvest.interfaces import IHarvester
 from ckanext.harvest.model import HarvestObject
@@ -39,6 +41,62 @@ class WAFHarvester(SpatialHarvester, SingletonPlugin):
             'title': 'Web Accessible Folder (WAF)',
             'description': 'A Web Accessible Folder (WAF) displaying a list of spatial metadata documents'
             }
+
+    def get_package_dict(self, iso_values, harvest_object):
+
+        package_dict = super(WAFHarvester, self).get_package_dict(iso_values, harvest_object)
+
+        # Add other elements from ISO metadata
+        # time_extents = self.infer_timeinstants(iso_values)
+        # if time_extents:
+        #     log.info("Adding Time Instants...")
+        #     package_dict['extras'].append({'key': 'temporal-extent-instant', 'value': time_extents})
+
+        ## Configuring package groups
+        group_mapping = self.source_config.get('group_mapping', {})
+
+        if group_mapping:
+            groups = self.handle_groups(harvest_object, group_mapping, iso_values)
+            if groups:
+                package_dict['groups'] = groups
+
+        # End of processing, return the modified package
+        return package_dict
+
+    def handle_groups(self, harvest_object, group_mapping, values):
+        try:
+            context = {'model': model, 'session': model.Session, 'user': 'harvest'}
+            validated_groups = []
+            cats = []
+
+            harvest_iso_categories = self.source_config.get('harvest_iso_categories')
+            if harvest_iso_categories == "True" or (harvest_iso_categories and harvest_iso_categories != "False"):
+                # Handle groups mapping using metadata TopicCategory
+                cats = values["topic-category"]
+                log.info(':::::::::::::-TOPIC-CATEGORY-::::::::::::: %r ', cats)
+
+            for cat in cats:
+                groupname = group_mapping[cat]
+
+                printname = groupname if not None else "NONE"
+                log.debug("category %s mapped into %s" % (cat, printname))
+
+                if groupname:
+                    try:
+                        data_dict = {'id': groupname}
+                        get_action('group_show')(context, data_dict)
+                        #log.info('Group %s found %s' % (groupname, group))
+                        #if self.api_version == 1:
+                            #validated_groups.append(group['name'])
+                        #else:
+                        #validated_groups.append(group['id'])
+                        validated_groups.append({'name': groupname})
+                    except NotFound as e:
+                        log.warning('Group %s from category %s is not available' % (groupname, cat))
+        except Exception as e:
+            log.warning('Error handling groups for metadata %s' % harvest_object.guid)
+
+        return validated_groups
 
 
     def get_original_url(self, harvest_object_id):
@@ -101,8 +159,8 @@ class WAFHarvester(SpatialHarvester, SingletonPlugin):
             for url, modified_date in _extract_waf(str(content),source_url,scraper):
                 url_to_modified_harvest[url] = modified_date
         except Exception as e:
-            msg = 'Error extracting URLs from %s, error was %s' % (source_url, e)
-            self._save_gather_error(msg,harvest_job)
+            msg = 'Error extracting URLs from %s, error was %r' % (source_url, e)
+            self._save_gather_error(msg, harvest_job)
             return None
 
         ######  Compare source and db ######
@@ -173,8 +231,11 @@ class WAFHarvester(SpatialHarvester, SingletonPlugin):
                 len(ids), len(new), len(change), len(delete)))
             return ids
         else:
-            self._save_gather_error('No records to change',
-                                     harvest_job)
+            if config.get('ckan.harvest.status_mail.all', False):
+                self._save_gather_error('No records to change',
+                                         harvest_job)
+            else:
+                log.debug('No records to change')
             return []
 
     def fetch_stage(self, harvest_object):
@@ -225,25 +286,28 @@ class WAFHarvester(SpatialHarvester, SingletonPlugin):
         return True
 
 
-apache  = parse.SkipTo(parse.CaselessLiteral("<a href="), include=True).suppress() \
+apache  = parse.SkipTo(parse.CaselessLiteral("<a "), include=True).suppress() \
+        + parse.SkipTo(parse.CaselessLiteral('href='), include=True).suppress() \
         + parse.quotedString.setParseAction(parse.removeQuotes).setResultsName('url') \
         + parse.SkipTo("</a>", include=True).suppress() \
         + parse.Optional(parse.Literal('</td><td align="right">')).suppress() \
+        + parse.Optional(parse.Literal('</td><td class="R">')).suppress() \
         + parse.Optional(parse.Combine(
             parse.Word(parse.alphanums+'-') +
             parse.Word(parse.alphanums+':')
         ,adjacent=False, joinString=' ').setResultsName('date')
         )
 
-nginx   = parse.SkipTo(parse.CaselessLiteral("<a href="), include=True).suppress() \
+nginx = parse.SkipTo(parse.CaselessLiteral("<a "), include=True).suppress() \
+        + parse.SkipTo(parse.CaselessLiteral('href='), include=True).suppress() \
         + parse.quotedString.setParseAction(parse.removeQuotes).setResultsName('url') \
         + parse.SkipTo("</a>", include=True).suppress() \
         + parse.Optional(parse.Literal('</td><td align="right">')).suppress() \
+        + parse.Optional(parse.Literal('</td><td class="R">')).suppress() \
         + parse.Optional(parse.Combine(
             parse.Word(parse.alphanums+'-') +
-            parse.Word(parse.alphanums+':')
-        ,adjacent=False, joinString=' ').setResultsName('date')
-        )
+            parse.Word(parse.alphanums+':'), adjacent=False, joinString=' ').setResultsName('date')
+    )
 
 iis     = parse.SkipTo("<br>").suppress() \
         + parse.OneOrMore("<br>").suppress() \
@@ -265,6 +329,7 @@ iis     = parse.SkipTo("<br>").suppress() \
         + parse.SkipTo('<A HREF=', include=True).suppress() \
         + parse.quotedString.setParseAction(parse.removeQuotes).setResultsName('url')
 
+
 other = parse.SkipTo(parse.CaselessLiteral("<a href="), include=True).suppress() \
         + parse.quotedString.setParseAction(parse.removeQuotes).setResultsName('url')
 
@@ -275,12 +340,16 @@ scrapers = {'apache': parse.OneOrMore(parse.Group(apache)),
             'iis': parse.OneOrMore(parse.Group(iis))}
 
 def _get_scraper(server):
+
+    log.debug('sever: %s', server)
     if not server or 'apache' in server.lower():
         return 'apache'
     if 'nginx' in server.lower():
         return 'nginx'
     if 'Microsoft-IIS' in server:
         return 'iis'
+    if server == 'nginx':
+        return 'nginx'
     else:
         return 'other'
 
@@ -295,12 +364,20 @@ def _extract_waf(content, base_url, scraper, results = None, depth=0):
     base_url += '/'
 
     try:
-        parsed = scrapers[scraper].parseString(content)
-    except parse.ParseException:
-        parsed = scrapers['other'].parseString(content)
+        parsed = scrapers[scraper].parseString(str(content))
+    except parse.ParseException as pex:
+        log.error(pex)
+        parsed = scrapers['other'].parseString(str(content))
+    except Exception as e:
+        log.exception(e)
 
     for record in parsed:
         url = record.url
+
+        if '&#' in url:
+            url = html_parser.unescape(url)
+            record.url = url
+
         if not url:
             continue
         if url.startswith('_'):
