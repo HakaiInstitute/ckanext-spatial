@@ -1,7 +1,7 @@
 import os
 import cioos_iso_validate as cioos_iso_validate
 from pkg_resources import resource_stream
-from ckanext.spatial.model import ISODocument
+from ckanext.spatial.harvested_metadata import ISODocument
 
 from lxml import etree
 

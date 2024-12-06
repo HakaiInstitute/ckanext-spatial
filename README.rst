@@ -9,9 +9,8 @@ ckanext-spatial - Geo related plugins for CKAN
 This extension contains plugins that add geospatial capabilities to CKAN_,
 including:
 
-* A spatial field on the default CKAN dataset schema, that uses PostGIS_
-  as the backend and allows to perform spatial queries and to display the
-  dataset extent on the frontend.
+* Geospatial dataset search powered by Solr, providing a bounding box via
+  a UI map widget or the API.
 * Harvesters to import geospatial metadata into CKAN from other sources
   in ISO 19139 format and others.
 * Commands to support the CSW standard using pycsw_.
@@ -64,22 +63,16 @@ CIOOS-SIOOC Changes
   "organization_mapping":{"REMOTE ORG NAME": "Local Org Name"}
   ```
   to the harvester config. [5d0fbd0](https://github.com/cioos-siooc/ckanext-spatial/commit/5d0fbd0e33f7ee72d5576ba97781465971c5c839)
+  
+Supported Versions
+------------------
 
-* update ckan_pycsw so it works with current stable version of pycsw and add
-  option to pull spatial record from the package_converter extension. To use
-  add the following to the pycsw config file.
-  ```
-  [server]
-  harvest_type = package_converter
-  ```
-  [08cc41b](https://github.com/cioos-siooc/ckanext-spatial/commit/08cc41b414c513c2f5ff53dfa556cd8829ad4f31),
-  [b404f2e](https://github.com/cioos-siooc/ckanext-spatial/commit/b404f2e822109126609529d7c5d9aad32f69295a),
-  [8ac08f9](https://github.com/cioos-siooc/ckanext-spatial/commit/8ac08f95ce79f3b51fc01a5d51a902d32415aaca)
-* add 'parser' harvester config option to control which iso model is used. Valid values are 'iso19139' and 'iso19115'.
-  parser defaults to using the iso19115 model if not set
-* split the harvest_metadata.py file into a defailt iso19115 version and a iso19139 version to
-  make it easier to manage harvesting using these two standards
-* add a DataStreams specific waf harvester that scrapes a sitemap to find its datasets
+ckanext-spatial >= 2.0.0 supports CKAN 2.9 and CKAN 2.10.
+Check the
+[tested enviroments](https://github.com/ckan/ckanext-spatial/blob/master/.github/workflows/test.yml)
+for more details.  
+
+For previous CKAN versions please use the v1.x tags.
 
 
 Community
@@ -101,7 +94,7 @@ guidelines that apply to CKAN core, described in
 Copying and License
 -------------------
 
-This material is copyright (c) 2011-2021 Open Knowledge Foundation and contributors.
+This material is copyright (c) 2011-2023 Open Knowledge Foundation and contributors.
 
 It is open and licensed under the GNU Affero General Public License (AGPL) v3.0
 whose full text may be found at:
@@ -109,7 +102,6 @@ whose full text may be found at:
 http://www.fsf.org/licensing/licenses/agpl-3.0.html
 
 .. _CKAN: http://ckan.org
-.. _PostGIS: http://postgis.org
 .. _pycsw: http://pycsw.org
 .. _GeoJSON: http://geojson.org
 .. _ckanext-geoview: https://github.com/ckan/ckanext-geoview

@@ -1,9 +1,8 @@
 import ckan.plugins as p
 
 
-
 class SpatialQueryMixin(p.SingletonPlugin):
-    p.implements(p.IRoutes, inherit=True)
+    pass
 
     # IRoutes
     def before_map(self, map):

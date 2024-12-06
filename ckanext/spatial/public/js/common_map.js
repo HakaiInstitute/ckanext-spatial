@@ -46,16 +46,14 @@
                   'See http://www.mapbox.com/developers/api-overview/ for details';
           }
 
-          baseLayerUrl = '//{s}.tiles.mapbox.com/v4/' + mapConfig['mapbox.map_id'] + '/{z}/{x}/{y}.png?access_token=' + mapConfig['mapbox.access_token'];
-          leafletBaseLayerOptions.handle = mapConfig['mapbox.map_id'];
-          leafletBaseLayerOptions.subdomains = mapConfig.subdomains || 'abcd';
-          leafletBaseLayerOptions.attribution = mapConfig.attribution || 'Data: <a href="http://osm.org/copyright" target="_blank">OpenStreetMap</a>, Design: <a href="http://mapbox.com/about/maps" target="_blank">MapBox</a>';
-
-          baseLayer = new L.TileLayer(baseLayerUrl, leafletBaseLayerOptions);
+          baseLayer = L.tileLayer.provider('MapBox', {
+                id: mapConfig['mapbox.map_id'],
+                accessToken: mapConfig['mapbox.access_token']
+          });
 
       } else if (mapConfig.type == 'custom') {
           // Custom XYZ layer
-          baseLayerUrl = mapConfig['custom.url'];
+          baseLayerUrl = mapConfig['custom_url'] || mapConfig['custom.url'];
           if (mapConfig.subdomains) leafletBaseLayerOptions.subdomains = mapConfig.subdomains;
           if (mapConfig.tms) leafletBaseLayerOptions.tms = mapConfig.tms;
           leafletBaseLayerOptions.attribution = mapConfig.attribution;
@@ -76,6 +74,11 @@
 
           baseLayer = new L.TileLayer.WMS(baseLayerUrl, wmsOptions);
 
+
+      } else if (mapConfig.type) {
+
+        baseLayer = L.tileLayer.provider(mapConfig.type, mapConfig)
+
       } else {
         // Default to Stamen base map
         baseLayerUrl = 'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png?api_key=' + mapConfig['stadia.api_key'];
@@ -86,7 +89,9 @@
         //baseLayer = new L.maplibreGL(baseLayerUrl, leafletBaseLayerOptions);
       }
 
-      map.addLayer(baseLayer);
+      if (baseLayer) {
+        let attribution = L.control.attribution({"prefix": false});
+        attribution.addTo(map)
 
       function getColor(i) {
           pallet = ["#1f78b4","#e31a1c","#fb9a99","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#a6cee3","#b2df8a","#33a02c"];

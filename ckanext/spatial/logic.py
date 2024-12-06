@@ -3,7 +3,7 @@ import urllib
 import json
 import ckan.model as model
 from ckantoolkit import side_effect_free, get_action
-from ckanext.spatial.lib import get_srid, validate_bbox, bbox_query, polygon_query, validate_polygon
+from ckanext.spatial.lib import get_srid, normalize_bbox, bbox_query, polygon_query, normalize_polygon
 
 log = logging.getLogger(__name__)
 
@@ -23,13 +23,13 @@ def spatial_query_geo(context, data_dict):
 
     bbox = poly = []
     if 'bbox' in data_dict:
-        bbox = validate_bbox(data_dict['bbox'])
+        bbox = normalize_bbox(data_dict['bbox'])
     elif 'poly' in data_dict:
         poly_str = urllib.parse.unquote_plus(data_dict['poly'])
         if poly_str.startswith('BOX'):
-            bbox = validate_bbox(poly_str[4:-1])
+            bbox = normalize_bbox(poly_str[4:-1])
         else:
-            poly = validate_polygon(poly_str)
+            poly = normalize_polygon(poly_str)
     else:
         return []
 

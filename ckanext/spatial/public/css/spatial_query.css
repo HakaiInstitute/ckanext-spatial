@@ -4,10 +4,6 @@
 .module-content #dataset-map-container, .module-content #dataset-map-form-container {
   height: 250px;
 }
-#dataset-map-attribution {
-  font-size: 11px;
-  line-height: 1.5;
-}
 .module-heading .action {
   float: right;
   color: #888888;
@@ -58,44 +54,13 @@ background-position: -60px -1px;
   position: absolute;
   width: 940px;
   height: 384px;
-  top: -384px;
-  left: -1px;
   background-color: white;
   border: 1px solid #CCC;
   margin: 0;
 }
-.dataset-map-expanded #dataset-map #dataset-map-container {
-  height: 300px;
-}
-.dataset-map-expanded #dataset-map #dataset-map-attribution {
-  *zoom: 1;
-}
-.dataset-map-expanded #dataset-map #dataset-map-attribution:before,
-.dataset-map-expanded #dataset-map #dataset-map-attribution:after {
-  display: table;
-  content: "";
-  line-height: 0;
-}
-.dataset-map-expanded #dataset-map #dataset-map-attribution:after {
-  clear: both;
-}
-.dataset-map-expanded #dataset-map #dataset-map-attribution div {
-  float: left;
-  margin-right: 10px;
-}
-.dataset-map-expanded #dataset-map #dataset-map-edit-buttons {
-  display: block;
-  float: right;
-  padding: 10px;
-}
-.dataset-map-expanded #dataset-map #dataset-map-edit {
-  display: none;
-}
-.dataset-map-expanded #dataset-map .module-heading {
-  border-top-color: #000;
-}
-.dataset-map-expanded .wrapper {
-  margin-top: 383px;
+
+.modal-spatial-query {
+  max-width: 900px;
 }
 
 .leaflet-control-layers label:after {

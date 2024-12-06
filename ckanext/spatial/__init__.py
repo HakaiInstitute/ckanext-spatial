@@ -5,3 +5,9 @@ try:
 except ImportError:
     import pkgutil
     __path__ = pkgutil.extend_path(__path__, __name__)
+
+__version__ = "2.2.0"
+
+from .package_extent import *
+from .harvested_metadata import *
+from .harvested_metadata_iso19139 import *
