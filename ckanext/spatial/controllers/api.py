@@ -7,7 +7,7 @@ from ckan.model import Session
 from ckantoolkit import response
 
 from ckanext.harvest.model import HarvestObject, HarvestObjectExtra
-from ckanext.spatial.lib import get_srid, validate_bbox, bbox_query, polygon_query, validate_polygon
+from ckanext.spatial.lib import get_srid, normalize_bbox, bbox_query, polygon_query, normalize_polygon
 from ckanext.spatial import util
 
 log = logging.getLogger(__name__)
@@ -28,13 +28,13 @@ class ApiController(BaseApiController):
             request_data = request.params
 
         if 'bbox' in request_data:
-            bbox = validate_bbox(request_data['bbox'])
+            bbox = normalize_bbox(request_data['bbox'])
         elif 'poly' in request_data:
             poly_str = urllib.parse.unquote_plus(request_data['poly'])
             if poly_str.startswith('BOX'):
-                bbox = validate_bbox(poly_str[4:-1])
+                bbox = normalize_bbox(poly_str[4:-1])
             else:
-                poly = validate_polygon(poly_str)
+                poly = normalize_polygon(poly_str)
         else:
             abort(400, error_400_msg)
 

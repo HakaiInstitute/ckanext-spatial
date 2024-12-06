@@ -6,8 +6,8 @@ from ckanext.spatial.harvesters.csw import CSWHarvester
 import logging
 from ckan import model
 from ckan.model import Session
-from ckanext.spatial.model import ISODocument
-from ckanext.spatial.model import ISOElement
+from ckanext.spatial import ISODocument
+from ckanext.spatial import ISOElement
 
 from ckan.logic import ValidationError, NotFound, get_action
 

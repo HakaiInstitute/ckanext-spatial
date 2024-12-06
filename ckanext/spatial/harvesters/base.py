@@ -31,7 +31,7 @@ from ckanext.harvest.harvesters.base import HarvesterBase
 from ckanext.harvest.model import HarvestObject
 
 from ckanext.spatial.validation import Validators, all_validators
-from ckanext.spatial.model import ISODocument, ISODocument_iso19139
+from ckanext.spatial import ISODocument, ISODocument_iso19139
 from ckanext.spatial.interfaces import ISpatialHarvester
 from ckantoolkit import config
 

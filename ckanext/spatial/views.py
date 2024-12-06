@@ -7,12 +7,12 @@ import ckan.plugins.toolkit as tk
 from ckantoolkit import request
 from ckan.views.api import _finish_ok, _finish_bad_request
 from ckanext.spatial import logic
-from ckanext.spatial.lib import get_srid, validate_bbox, bbox_query, polygon_query, validate_polygon
 from ckanext.spatial import util
 
 
 log = logging.getLogger(__name__)
 
+api = Blueprint("spatial_api", __name__)
 
 def spatial_query_geo_view(register):
     error_400_msg = \
